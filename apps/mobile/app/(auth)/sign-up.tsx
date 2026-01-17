@@ -1,7 +1,7 @@
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
+  Alert,
   Button,
   SafeAreaView,
   StyleSheet,
@@ -16,23 +16,37 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const handleSignUp = async () => {
-    setIsSubmitting(true);
-    setError(null);
-    setMessage(null);
+    const trimmedEmail = email.trim();
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
+    if (!trimmedEmail || !password) {
+      Alert.alert("Sign up failed", "Email and password are required.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedEmail,
       password
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (error) {
+      Alert.alert("Sign up failed", error.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const needsConfirmation = !data.user || !data.user.confirmed_at;
+
+    if (needsConfirmation) {
+      Alert.alert(
+        "Check your email",
+        "Confirm your email then sign in."
+      );
     } else {
-      setMessage("Check your email to confirm your account.");
+      router.replace("/(tabs)");
     }
 
     setIsSubmitting(false);
@@ -41,7 +55,6 @@ export default function SignUpScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Create your account</Text>
-      <Text style={styles.subtitle}>Use your email and a strong password.</Text>
 
       <View style={styles.form}>
         <TextInput
@@ -62,18 +75,16 @@ export default function SignUpScreen() {
           style={styles.input}
           value={password}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {message ? <Text style={styles.message}>{message}</Text> : null}
         <View style={styles.buttonRow}>
-          {isSubmitting ? (
-            <ActivityIndicator />
-          ) : (
-            <Button title="Create account" onPress={handleSignUp} />
-          )}
+          <Button
+            title={isSubmitting ? "Creating..." : "Create account"}
+            onPress={handleSignUp}
+            disabled={isSubmitting}
+          />
         </View>
       </View>
 
-      <Link href="/(auth)/sign-in" style={styles.link}>
+      <Link href="/sign-in" style={styles.link}>
         Already have an account? Sign in.
       </Link>
     </SafeAreaView>
@@ -91,9 +102,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700"
   },
-  subtitle: {
-    color: "#666"
-  },
   form: {
     gap: 12
   },
@@ -106,12 +114,6 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     marginTop: 8
-  },
-  error: {
-    color: "#b00020"
-  },
-  message: {
-    color: "#2563eb"
   },
   link: {
     color: "#2563eb"
