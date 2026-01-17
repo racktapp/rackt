@@ -111,7 +111,7 @@ export default function CreateProfileScreen() {
       return;
     }
 
-    router.replace("/(tabs)");
+    router.replace("/(onboarding)/sports-and-levels");
     setIsSubmitting(false);
   };
 

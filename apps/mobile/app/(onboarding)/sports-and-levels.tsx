@@ -1,0 +1,317 @@
+import { router } from "expo-router";
+import { useMemo, useState } from "react";
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+
+type SportKey = "tennis" | "padel" | "badminton" | "table_tennis";
+
+type SportSelection = {
+  selected: boolean;
+  level: string;
+  hasLevel: boolean;
+  reliability: string;
+};
+
+const SPORTS: { key: SportKey; label: string }[] = [
+  { key: "tennis", label: "Tennis" },
+  { key: "padel", label: "Padel" },
+  { key: "badminton", label: "Badminton" },
+  { key: "table_tennis", label: "Table tennis" }
+];
+
+const DEFAULT_LEVEL = "3.0";
+const DEFAULT_RELIABILITY = "30";
+
+export default function SportsAndLevelsScreen() {
+  const [selections, setSelections] = useState<Record<SportKey, SportSelection>>(
+    () =>
+      SPORTS.reduce(
+        (accumulator, sport) => {
+          accumulator[sport.key] = {
+            selected: false,
+            level: DEFAULT_LEVEL,
+            hasLevel: false,
+            reliability: DEFAULT_RELIABILITY
+          };
+          return accumulator;
+        },
+        {} as Record<SportKey, SportSelection>
+      )
+  );
+
+  const selectedCount = useMemo(
+    () => Object.values(selections).filter((selection) => selection.selected)
+      .length,
+    [selections]
+  );
+
+  const toggleSport = (sportKey: SportKey) => {
+    setSelections((current) => ({
+      ...current,
+      [sportKey]: {
+        ...current[sportKey],
+        selected: !current[sportKey].selected
+      }
+    }));
+  };
+
+  const updateLevel = (sportKey: SportKey, level: string) => {
+    setSelections((current) => ({
+      ...current,
+      [sportKey]: {
+        ...current[sportKey],
+        level
+      }
+    }));
+  };
+
+  const updateHasLevel = (sportKey: SportKey, hasLevel: boolean) => {
+    setSelections((current) => ({
+      ...current,
+      [sportKey]: {
+        ...current[sportKey],
+        hasLevel,
+        level: hasLevel ? current[sportKey].level : DEFAULT_LEVEL,
+        reliability: hasLevel ? current[sportKey].reliability : DEFAULT_RELIABILITY
+      }
+    }));
+  };
+
+  const updateReliability = (sportKey: SportKey, reliability: string) => {
+    setSelections((current) => ({
+      ...current,
+      [sportKey]: {
+        ...current[sportKey],
+        reliability
+      }
+    }));
+  };
+
+  const handleFinish = () => {
+    if (selectedCount === 0) {
+      Alert.alert("Choose at least one sport", "Select a sport to continue.");
+      return;
+    }
+
+    const payload = SPORTS.filter((sport) => selections[sport.key].selected).map(
+      (sport) => ({
+        sport: sport.key,
+        level: Number.parseFloat(selections[sport.key].level),
+        hasLevel: selections[sport.key].hasLevel,
+        reliability: selections[sport.key].hasLevel
+          ? Number.parseFloat(selections[sport.key].reliability)
+          : null
+      })
+    );
+
+    for (const entry of payload) {
+      if (Number.isNaN(entry.level) || entry.level < 0 || entry.level > 7) {
+        Alert.alert(
+          "Invalid level",
+          "Levels must be a number between 0.0 and 7.0."
+        );
+        return;
+      }
+
+      if (
+        entry.hasLevel &&
+        (entry.reliability === null ||
+          Number.isNaN(entry.reliability) ||
+          entry.reliability < 0 ||
+          entry.reliability > 100)
+      ) {
+        Alert.alert(
+          "Invalid reliability",
+          "Reliability must be a number between 0 and 100."
+        );
+        return;
+      }
+    }
+
+    router.push({
+      pathname: "/(tabs)",
+      params: {
+        selectedSports: JSON.stringify(payload)
+      }
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.title}>Choose your sports</Text>
+        <Text style={styles.subtitle}>Select the sports you play most.</Text>
+
+        <View style={styles.list}>
+          {SPORTS.map((sport) => {
+            const selection = selections[sport.key];
+            return (
+              <View key={sport.key} style={styles.card}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.row}
+                  onPress={() => toggleSport(sport.key)}
+                >
+                  <View style={styles.checkboxOuter}>
+                    {selection.selected ? (
+                      <View style={styles.checkboxInner} />
+                    ) : null}
+                  </View>
+                  <Text style={styles.rowLabel}>{sport.label}</Text>
+                </TouchableOpacity>
+
+                {selection.selected ? (
+                  <View style={styles.detailSection}>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Starting level</Text>
+                      <TextInput
+                        keyboardType="decimal-pad"
+                        value={selection.level}
+                        onChangeText={(value) => updateLevel(sport.key, value)}
+                        style={styles.input}
+                      />
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>I already have a level</Text>
+                      <Switch
+                        value={selection.hasLevel}
+                        onValueChange={(value) =>
+                          updateHasLevel(sport.key, value)
+                        }
+                      />
+                    </View>
+                    {selection.hasLevel ? (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Reliability</Text>
+                        <TextInput
+                          keyboardType="number-pad"
+                          value={selection.reliability}
+                          onChangeText={(value) =>
+                            updateReliability(sport.key, value)
+                          }
+                          style={styles.input}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
+          <Text style={styles.finishText}>Finish</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff"
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 120
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 8
+  },
+  subtitle: {
+    color: "#4b5563",
+    marginBottom: 16
+  },
+  list: {
+    gap: 16
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: "#f9fafb",
+    gap: 12
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12
+  },
+  checkboxOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#111827",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff"
+  },
+  checkboxInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+    backgroundColor: "#111827"
+  },
+  rowLabel: {
+    fontSize: 16,
+    fontWeight: "600"
+  },
+  detailSection: {
+    gap: 12,
+    paddingTop: 4
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: "#374151",
+    flex: 1
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 80,
+    textAlign: "center",
+    backgroundColor: "#fff"
+  },
+  footer: {
+    padding: 24,
+    borderTopWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#fff"
+  },
+  finishButton: {
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center"
+  },
+  finishText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16
+  }
+});
