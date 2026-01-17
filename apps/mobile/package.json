@@ -1,0 +1,25 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "expo lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "expo": "~51.0.28",
+    "expo-router": "^3.5.23",
+    "react": "18.2.0",
+    "react-native": "0.74.5",
+    "react-native-url-polyfill": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.79",
+    "typescript": "^5.4.5"
+  }
+}
