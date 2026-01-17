@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -18,7 +19,10 @@ export default function SettingsScreen() {
     const { error } = await supabase.auth.signOut();
     if (error) {
       Alert.alert("Sign out failed", error.message);
+      setIsSigningOut(false);
+      return;
     }
+    router.replace("/(auth)/sign-in");
     setIsSigningOut(false);
   };
 
@@ -28,11 +32,15 @@ export default function SettingsScreen() {
       <Text style={styles.subtitle}>
         Manage your account preferences and authentication status.
       </Text>
-      {isSigningOut ? (
-        <ActivityIndicator />
-      ) : (
-        <Button title="Log out" onPress={handleSignOut} />
-      )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        {isSigningOut ? (
+          <ActivityIndicator />
+        ) : (
+          <Button title="Sign out" onPress={handleSignOut} />
+        )}
+      </View>
     </View>
   );
 }
@@ -40,17 +48,23 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
     padding: 24,
-    gap: 12
+    gap: 16,
+    backgroundColor: "#fff"
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "700"
   },
   subtitle: {
-    textAlign: "center",
-    color: "#666"
+    color: "#4b5563"
+  },
+  section: {
+    gap: 12
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827"
   }
 });
