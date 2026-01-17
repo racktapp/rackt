@@ -20,6 +20,8 @@
     "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-expo": "~7.1.2",
     "@types/react": "^18.2.79",
     "typescript": "^5.4.5"
   }

@@ -1,25 +1,15 @@
 module.exports = {
-  extends: 'expo',
-  env: {
-    browser: true,
-    es2021: true,
-    node: true,
-  },
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-  },
+  extends: ["expo"],
+  env: { browser: true, es2021: true, node: true },
   overrides: [
     {
       files: [
-        'metro.config.js',
-        'babel.config.js',
-        'app.config.js',
-        'app.config.ts',
+        "metro.config.js",
+        "babel.config.js",
+        "app.config.js",
+        "app.config.ts",
       ],
-      env: {
-        node: true,
-      },
+      env: { node: true },
     },
   ],
 };
