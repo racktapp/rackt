@@ -11,12 +11,29 @@ export default function Index() {
   useEffect(() => {
     let isMounted = true;
 
-    const handleSession = (session: Session | null) => {
+    const handleSession = async (session: Session | null) => {
       if (!isMounted) {
         return;
       }
 
       if (session) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const username = data?.username?.trim() ?? "";
+
+        if (error || !username) {
+          router.replace("/(onboarding)/create-profile");
+          return;
+        }
+
         router.replace("/(tabs)");
       } else {
         router.replace("/(auth)/sign-in");
@@ -25,7 +42,7 @@ export default function Index() {
 
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
-      handleSession(data.session ?? null);
+      await handleSession(data.session ?? null);
       if (isMounted) {
         setIsChecking(false);
       }
