@@ -34,6 +34,21 @@ export default function Index() {
           return;
         }
 
+        const { data: ratingData, error: ratingError } = await supabase
+          .from("sport_ratings")
+          .select("sport")
+          .eq("user_id", session.user.id)
+          .limit(1);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (ratingError || !ratingData || ratingData.length === 0) {
+          router.replace("/(onboarding)/sports-and-levels");
+          return;
+        }
+
         router.replace("/(tabs)");
       } else {
         router.replace("/(auth)/sign-in");
