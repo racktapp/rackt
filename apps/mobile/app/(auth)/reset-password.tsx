@@ -1,4 +1,4 @@
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -12,40 +12,38 @@ import {
 
 import { supabase } from "../../lib/supabase";
 
-export default function SignInScreen() {
+export default function ResetPasswordScreen() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleReset = async () => {
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !password) {
-      Alert.alert("Sign in failed", "Email and password are required.");
+    if (!trimmedEmail) {
+      Alert.alert("Reset failed", "Email is required.");
       return;
     }
 
     setIsSubmitting(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
-      password
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail);
 
-    if (signInError) {
-      Alert.alert("Sign in failed", signInError.message);
+    if (error) {
+      Alert.alert("Reset failed", error.message);
       setIsSubmitting(false);
       return;
     }
 
-    router.replace("/(tabs)");
+    Alert.alert("Email sent", "Check your email for the reset link.");
     setIsSubmitting(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Sign in with your email and password.</Text>
+      <Text style={styles.title}>Reset password</Text>
+      <Text style={styles.subtitle}>
+        Enter your email to receive a password reset link.
+      </Text>
 
       <View style={styles.form}>
         <TextInput
@@ -57,29 +55,17 @@ export default function SignInScreen() {
           style={styles.input}
           value={email}
         />
-        <TextInput
-          autoCapitalize="none"
-          autoComplete="password"
-          onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-        />
         <View style={styles.buttonRow}>
           <Button
-            title={isSubmitting ? "Signing in..." : "Sign in"}
-            onPress={handleSignIn}
+            title={isSubmitting ? "Sending..." : "Send reset email"}
+            onPress={handleReset}
             disabled={isSubmitting}
           />
         </View>
       </View>
 
-      <Link href="/(auth)/reset-password" style={styles.link}>
-        Forgot password?
-      </Link>
-      <Link href="/sign-up" style={styles.link}>
-        Don&apos;t have an account? Create one.
+      <Link href="/(auth)/sign-in" style={styles.link}>
+        Back to sign in
       </Link>
     </SafeAreaView>
   );
