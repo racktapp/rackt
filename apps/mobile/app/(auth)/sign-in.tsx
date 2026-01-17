@@ -1,7 +1,7 @@
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
+  Alert,
   Button,
   SafeAreaView,
   StyleSheet,
@@ -16,21 +16,29 @@ export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password) {
+      Alert.alert("Sign in failed", "Email and password are required.");
+      return;
+    }
+
     setIsSubmitting(true);
-    setError(null);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: trimmedEmail,
       password
     });
 
     if (signInError) {
-      setError(signInError.message);
+      Alert.alert("Sign in failed", signInError.message);
+      setIsSubmitting(false);
+      return;
     }
 
+    router.replace("/(tabs)");
     setIsSubmitting(false);
   };
 
@@ -58,17 +66,16 @@ export default function SignInScreen() {
           style={styles.input}
           value={password}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.buttonRow}>
-          {isSubmitting ? (
-            <ActivityIndicator />
-          ) : (
-            <Button title="Sign in" onPress={handleSignIn} />
-          )}
+          <Button
+            title={isSubmitting ? "Signing in..." : "Sign in"}
+            onPress={handleSignIn}
+            disabled={isSubmitting}
+          />
         </View>
       </View>
 
-      <Link href="/(auth)/sign-up" style={styles.link}>
+      <Link href="/sign-up" style={styles.link}>
         Don&apos;t have an account? Create one.
       </Link>
     </SafeAreaView>
@@ -101,9 +108,6 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     marginTop: 8
-  },
-  error: {
-    color: "#b00020"
   },
   link: {
     color: "#2563eb"
