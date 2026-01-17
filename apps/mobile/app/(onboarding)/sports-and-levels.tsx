@@ -12,6 +12,8 @@ import {
   View
 } from "react-native";
 
+import { supabase } from "../../lib/supabase";
+
 type SportKey = "tennis" | "padel" | "badminton" | "table_tennis";
 
 type SportSelection = {
@@ -47,6 +49,7 @@ export default function SportsAndLevelsScreen() {
         {} as Record<SportKey, SportSelection>
       )
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedCount = useMemo(
     () => Object.values(selections).filter((selection) => selection.selected)
@@ -96,21 +99,46 @@ export default function SportsAndLevelsScreen() {
     }));
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (selectedCount === 0) {
       Alert.alert("Choose at least one sport", "Select a sport to continue.");
       return;
     }
 
+    setIsSubmitting(true);
+
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user) {
+      setIsSubmitting(false);
+      router.replace("/(auth)/sign-in");
+      return;
+    }
+
+    const userId = data.user.id;
+
     const payload = SPORTS.filter((sport) => selections[sport.key].selected).map(
-      (sport) => ({
-        sport: sport.key,
-        level: Number.parseFloat(selections[sport.key].level),
-        hasLevel: selections[sport.key].hasLevel,
-        reliability: selections[sport.key].hasLevel
-          ? Number.parseFloat(selections[sport.key].reliability)
-          : null
-      })
+      (sport) => {
+        const selection = selections[sport.key];
+        const hasLevel = selection.hasLevel;
+        const reliabilityInput = selection.reliability.trim();
+        const level = hasLevel
+          ? Number.parseFloat(selection.level)
+          : Number.parseFloat(DEFAULT_LEVEL);
+        const reliability = hasLevel
+          ? Number.parseFloat(
+              reliabilityInput ? reliabilityInput : DEFAULT_RELIABILITY
+            )
+          : 20;
+
+        return {
+          user_id: userId,
+          sport: sport.key,
+          level,
+          reliability,
+          source: hasLevel ? "user_import" : "system"
+        };
+      }
     );
 
     for (const entry of payload) {
@@ -119,13 +147,13 @@ export default function SportsAndLevelsScreen() {
           "Invalid level",
           "Levels must be a number between 0.0 and 7.0."
         );
+        setIsSubmitting(false);
         return;
       }
 
       if (
-        entry.hasLevel &&
-        (entry.reliability === null ||
-          Number.isNaN(entry.reliability) ||
+        entry.source === "user_import" &&
+        (Number.isNaN(entry.reliability) ||
           entry.reliability < 0 ||
           entry.reliability > 100)
       ) {
@@ -133,16 +161,23 @@ export default function SportsAndLevelsScreen() {
           "Invalid reliability",
           "Reliability must be a number between 0 and 100."
         );
+        setIsSubmitting(false);
         return;
       }
     }
 
-    router.push({
-      pathname: "/(tabs)",
-      params: {
-        selectedSports: JSON.stringify(payload)
-      }
-    });
+    const { error: upsertError } = await supabase
+      .from("sport_ratings")
+      .upsert(payload, { onConflict: "user_id,sport" });
+
+    if (upsertError) {
+      Alert.alert("Failed to save ratings", upsertError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    router.replace("/(tabs)");
+    setIsSubmitting(false);
   };
 
   return (
@@ -210,8 +245,17 @@ export default function SportsAndLevelsScreen() {
         </View>
       </ScrollView>
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
-          <Text style={styles.finishText}>Finish</Text>
+        <TouchableOpacity
+          style={[
+            styles.finishButton,
+            isSubmitting ? styles.finishButtonDisabled : null
+          ]}
+          onPress={handleFinish}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.finishText}>
+            {isSubmitting ? "Saving..." : "Finish"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -308,6 +352,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center"
+  },
+  finishButtonDisabled: {
+    opacity: 0.7
   },
   finishText: {
     color: "#fff",
