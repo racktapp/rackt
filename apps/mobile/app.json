@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "mobile",
-    "slug": "rackt",
+    "slug": "rackt-9xl8kl4ua-m3dk-mign1",
     "owner": "rackts-organization",
     "scheme": "mobile",
     "version": "1.0.0",
@@ -11,7 +11,7 @@
     "plugins": ["expo-router"],
     "extra": {
       "eas": {
-        "projectId": "38428c85-907b-4b54-8954-6f0f43a1f1ec"
+        "projectId": "bbe46497-27d5-4c40-bfbe-402b062ede98"
       },
       "router": {
         "origin": "app"
