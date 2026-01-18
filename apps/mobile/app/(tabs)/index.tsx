@@ -112,18 +112,24 @@ export default function HomeScreen() {
       return;
     }
 
-    const mySideByMatchId = new Map(
-      (myPlayers ?? []).map((row) => [row.match_id, row.side])
-    );
+    const mySideByMatchId = new Map<number, number>();
+    (myPlayers ?? []).forEach((row) => {
+      const side = Number(row.side);
+      if (side === 1 || side === 2) {
+        mySideByMatchId.set(row.match_id, side);
+      }
+    });
 
     let wins = 0;
     let losses = 0;
+    let confirmedMatches = 0;
 
     (matchRows ?? []).forEach((match) => {
       const mySide = mySideByMatchId.get(match.id);
-      if (!mySide || match.winner_side === null) {
+      if (!mySide || (match.winner_side !== 1 && match.winner_side !== 2)) {
         return;
       }
+      confirmedMatches += 1;
       if (match.winner_side === mySide) {
         wins += 1;
       } else {
@@ -131,7 +137,6 @@ export default function HomeScreen() {
       }
     });
 
-    const confirmedMatches = matchRows?.length ?? 0;
     const winRate = confirmedMatches
       ? Math.round((wins / confirmedMatches) * 100)
       : 0;
