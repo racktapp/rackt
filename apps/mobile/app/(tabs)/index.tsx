@@ -21,6 +21,13 @@ type SportRating = {
   updated_at: string | null;
 };
 
+type StatsSummary = {
+  confirmedMatches: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+};
+
 const formatSportLabel = (sport: string) =>
   sport
     .replace(/_/g, " ")
@@ -34,8 +41,16 @@ const formatReliability = (reliability: number | null) =>
     ? "—"
     : `${Math.round(reliability)}%`;
 
+const emptyStats: StatsSummary = {
+  confirmedMatches: 0,
+  wins: 0,
+  losses: 0,
+  winRate: 0
+};
+
 export default function HomeScreen() {
   const [ratings, setRatings] = useState<SportRating[]>([]);
+  const [stats, setStats] = useState<StatsSummary>(emptyStats);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchRatings = useCallback(async () => {
@@ -61,6 +76,72 @@ export default function HomeScreen() {
     } else {
       setRatings(data ?? []);
     }
+
+    const { data: myPlayers, error: myPlayersError } = await supabase
+      .from("match_players")
+      .select("match_id, side")
+      .eq("user_id", userData.user.id);
+
+    if (myPlayersError) {
+      Alert.alert("Unable to load stats", myPlayersError.message);
+      setStats(emptyStats);
+      setIsLoading(false);
+      return;
+    }
+
+    const matchIds = Array.from(
+      new Set((myPlayers ?? []).map((row) => row.match_id))
+    );
+
+    if (matchIds.length === 0) {
+      setStats(emptyStats);
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: matchRows, error: matchesError } = await supabase
+      .from("matches")
+      .select("id, status, winner_side")
+      .in("id", matchIds)
+      .eq("status", "confirmed");
+
+    if (matchesError) {
+      Alert.alert("Unable to load stats", matchesError.message);
+      setStats(emptyStats);
+      setIsLoading(false);
+      return;
+    }
+
+    const mySideByMatchId = new Map(
+      (myPlayers ?? []).map((row) => [row.match_id, row.side])
+    );
+
+    let wins = 0;
+    let losses = 0;
+
+    (matchRows ?? []).forEach((match) => {
+      const mySide = mySideByMatchId.get(match.id);
+      if (!mySide || match.winner_side === null) {
+        return;
+      }
+      if (match.winner_side === mySide) {
+        wins += 1;
+      } else {
+        losses += 1;
+      }
+    });
+
+    const confirmedMatches = matchRows?.length ?? 0;
+    const winRate = confirmedMatches
+      ? Math.round((wins / confirmedMatches) * 100)
+      : 0;
+
+    setStats({
+      confirmedMatches,
+      wins,
+      losses,
+      winRate
+    });
 
     setIsLoading(false);
   }, []);
@@ -98,6 +179,34 @@ export default function HomeScreen() {
             Pending confirmations
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButtonSecondary}
+          onPress={() => router.push("/(tabs)/history")}
+        >
+          <Text style={styles.actionButtonSecondaryText}>Match history</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.statsCard}>
+        <Text style={styles.statsTitle}>Stats</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>{stats.confirmedMatches}</Text>
+            <Text style={styles.statsLabel}>Confirmed</Text>
+          </View>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>{stats.wins}</Text>
+            <Text style={styles.statsLabel}>Wins</Text>
+          </View>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>{stats.losses}</Text>
+            <Text style={styles.statsLabel}>Losses</Text>
+          </View>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>{stats.winRate}%</Text>
+            <Text style={styles.statsLabel}>Win rate</Text>
+          </View>
+        </View>
       </View>
 
       {isLoading ? (
@@ -189,6 +298,33 @@ const styles = StyleSheet.create({
   actionButtonSecondaryText: {
     color: "#111",
     fontWeight: "600"
+  },
+  statsCard: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 16,
+    padding: 16,
+    gap: 12
+  },
+  statsTitle: {
+    fontSize: 18,
+    fontWeight: "700"
+  },
+  statsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12
+  },
+  statsItem: {
+    flexGrow: 1,
+    minWidth: 120,
+    paddingVertical: 8
+  },
+  statsValue: {
+    fontSize: 20,
+    fontWeight: "700"
+  },
+  statsLabel: {
+    color: "#666"
   },
   loadingState: {
     alignItems: "center",
