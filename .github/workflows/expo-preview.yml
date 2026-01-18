@@ -41,6 +41,8 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
+          npx expo install --fix
+          npx expo-doctor
           npx eas-cli@latest update --branch preview --message "preview $GITHUB_SHA" --non-interactive
 
       - name: Preview instructions
