@@ -46,6 +46,7 @@ export default function ReportMatchScreen() {
   const [opponentIds, setOpponentIds] = useState<string[]>([]);
   const [scoreText, setScoreText] = useState("");
   const [isRanked, setIsRanked] = useState(true);
+  const [winnerSide, setWinnerSide] = useState<1 | 2>(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -210,7 +211,8 @@ export default function ReportMatchScreen() {
         status: "pending",
         reported_by: user.id,
         played_at: new Date().toISOString(),
-        score_text: scoreText.trim()
+        score_text: scoreText.trim(),
+        winner_side: winnerSide
       })
       .select("id")
       .single();
@@ -414,6 +416,31 @@ export default function ReportMatchScreen() {
               value={scoreText}
               onChangeText={setScoreText}
             />
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Winner</Text>
+            <View style={styles.rowWrap}>
+              {[1, 2].map((side) => (
+                <TouchableOpacity
+                  key={`winner-${side}`}
+                  style={[
+                    styles.choiceButton,
+                    winnerSide === side && styles.choiceButtonActive
+                  ]}
+                  onPress={() => setWinnerSide(side as 1 | 2)}
+                >
+                  <Text
+                    style={[
+                      styles.choiceButtonText,
+                      winnerSide === side && styles.choiceButtonTextActive
+                    ]}
+                  >
+                    Team {side}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View style={styles.sectionRow}>

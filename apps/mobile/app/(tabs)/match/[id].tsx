@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +22,8 @@ type MatchRow = {
   reported_by: string | null;
   played_at: string | null;
   score_text: string | null;
+  winner_side: number | null;
+  rating_applied: boolean | null;
 };
 
 type MatchPlayerRow = {
@@ -65,6 +67,15 @@ export default function MatchDetailScreen() {
   const [confirmations, setConfirmations] = useState<ConfirmationRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isWinnerUpdating, setIsWinnerUpdating] = useState(false);
+  const isFinalizingRef = useRef(false);
+
+  const getConfirmationState = (rows: ConfirmationRow[]) => {
+    const hasDisputed = rows.some((row) => row.status === "disputed");
+    const allConfirmed =
+      rows.length > 0 && rows.every((row) => row.status === "confirmed");
+    return { hasDisputed, allConfirmed };
+  };
 
   const loadMatch = useCallback(async () => {
     if (!matchId || typeof matchId !== "string") {
@@ -86,7 +97,9 @@ export default function MatchDetailScreen() {
 
     const { data: matchRow, error: matchError } = await supabase
       .from("matches")
-      .select("id, sport, format, is_ranked, status, reported_by, played_at, score_text")
+      .select(
+        "id, sport, format, is_ranked, status, reported_by, played_at, score_text, winner_side, rating_applied"
+      )
       .eq("id", matchId)
       .single();
 
@@ -146,31 +159,51 @@ export default function MatchDetailScreen() {
     setIsLoading(false);
 
     if (matchRow.reported_by === data.user.id) {
-      const hasDisputed = (confirmationRows ?? []).some(
-        (row) => row.status === "disputed"
+      const { hasDisputed, allConfirmed } = getConfirmationState(
+        confirmationRows ?? []
       );
-      const allConfirmed =
-        (confirmationRows ?? []).length > 0 &&
-        (confirmationRows ?? []).every((row) => row.status === "confirmed");
-      let nextStatus = matchRow.status;
 
-      if (hasDisputed) {
-        nextStatus = "disputed";
-      } else if (allConfirmed && matchRow.is_ranked) {
-        nextStatus = "confirmed";
-      }
-
-      if (nextStatus && nextStatus !== matchRow.status) {
+      if (hasDisputed && matchRow.status !== "disputed") {
         const { error: statusError } = await supabase
           .from("matches")
-          .update({ status: nextStatus })
+          .update({ status: "disputed" })
           .eq("id", matchRow.id);
 
         if (!statusError) {
           setMatch((current) =>
-            current ? { ...current, status: nextStatus } : current
+            current ? { ...current, status: "disputed" } : current
           );
         }
+      } else if (
+        allConfirmed &&
+        matchRow.is_ranked &&
+        !matchRow.rating_applied &&
+        !isFinalizingRef.current
+      ) {
+        isFinalizingRef.current = true;
+        const { error: finalizeError } = await supabase.rpc("finalize_match", {
+          match_id: matchRow.id
+        });
+
+        if (finalizeError) {
+          Alert.alert("Finalize failed", finalizeError.message);
+        } else {
+          const { data: refreshedMatch, error: refreshError } = await supabase
+            .from("matches")
+            .select(
+              "id, sport, format, is_ranked, status, reported_by, played_at, score_text, winner_side, rating_applied"
+            )
+            .eq("id", matchRow.id)
+            .single();
+
+          if (refreshError) {
+            Alert.alert("Match error", refreshError.message);
+          } else if (refreshedMatch) {
+            setMatch(refreshedMatch);
+          }
+        }
+
+        isFinalizingRef.current = false;
       }
     }
   }, [matchId]);
@@ -191,6 +224,24 @@ export default function MatchDetailScreen() {
     () => players.filter((player) => player.side === 2),
     [players]
   );
+
+  const { allConfirmed } = useMemo(
+    () => getConfirmationState(confirmations),
+    [confirmations]
+  );
+
+  const isReporter = match?.reported_by === user?.id;
+  const winnerLabel =
+    match?.winner_side === 1
+      ? "Team 1"
+      : match?.winner_side === 2
+      ? "Team 2"
+      : "Not set";
+  const canEditWinner =
+    Boolean(isReporter) &&
+    (match?.status ?? "pending") === "pending" &&
+    !match?.rating_applied &&
+    !allConfirmed;
 
   const userConfirmation = useMemo(
     () => confirmations.find((row) => row.user_id === user?.id),
@@ -220,6 +271,30 @@ export default function MatchDetailScreen() {
     setIsUpdating(false);
   };
 
+  const handleWinnerChange = async (side: 1 | 2) => {
+    if (!matchId || typeof matchId !== "string") {
+      return;
+    }
+
+    setIsWinnerUpdating(true);
+
+    const { error } = await supabase
+      .from("matches")
+      .update({ winner_side: side })
+      .eq("id", matchId);
+
+    if (error) {
+      Alert.alert("Update failed", error.message);
+      setIsWinnerUpdating(false);
+      return;
+    }
+
+    setMatch((current) =>
+      current ? { ...current, winner_side: side } : current
+    );
+    setIsWinnerUpdating(false);
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Match details</Text>
@@ -241,6 +316,7 @@ export default function MatchDetailScreen() {
             <Text style={styles.cardStatus}>
               Status: {match.status ?? "pending"}
             </Text>
+            <Text style={styles.cardMeta}>Winner: {winnerLabel}</Text>
           </View>
 
           <View style={styles.section}>
@@ -291,6 +367,38 @@ export default function MatchDetailScreen() {
                 </Text>
               </View>
             ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Winner</Text>
+            <Text style={styles.helperText}>Selected: {winnerLabel}</Text>
+            {canEditWinner ? (
+              <View style={styles.actionRow}>
+                {[1, 2].map((side) => {
+                  const isActive = match.winner_side === side;
+                  return (
+                    <TouchableOpacity
+                      key={`winner-${side}`}
+                      style={[
+                        styles.winnerButton,
+                        isActive && styles.winnerButtonActive
+                      ]}
+                      onPress={() => handleWinnerChange(side as 1 | 2)}
+                      disabled={isWinnerUpdating}
+                    >
+                      <Text
+                        style={[
+                          styles.winnerButtonText,
+                          isActive && styles.winnerButtonTextActive
+                        ]}
+                      >
+                        Team {side}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
 
           {userConfirmation?.status === "pending" ? (
@@ -364,6 +472,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600"
   },
+  helperText: {
+    color: "#666"
+  },
   playerName: {
     fontSize: 15,
     fontWeight: "600"
@@ -396,5 +507,24 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "#fff",
     fontWeight: "600"
+  },
+  winnerButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd"
+  },
+  winnerButtonActive: {
+    backgroundColor: "#111",
+    borderColor: "#111"
+  },
+  winnerButtonText: {
+    fontWeight: "600",
+    color: "#333"
+  },
+  winnerButtonTextActive: {
+    color: "#fff"
   }
 });
