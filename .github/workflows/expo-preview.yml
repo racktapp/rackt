@@ -23,11 +23,7 @@ jobs:
       - name: Install dependencies
         working-directory: apps/mobile
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci --legacy-peer-deps
-          else
-            npm install --legacy-peer-deps
-          fi
+          npm install --legacy-peer-deps
 
       - name: Create Expo env file
         working-directory: apps/mobile
