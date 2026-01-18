@@ -38,6 +38,15 @@ type ConfirmationRow = {
   status: string;
 };
 
+type SportRatingHistoryRow = {
+  match_id: string;
+  user_id: string;
+  level_before: number | null;
+  level_after: number | null;
+  delta: number | null;
+  reliability_after: number | null;
+};
+
 type Profile = {
   id: string;
   username: string | null;
@@ -65,6 +74,9 @@ export default function MatchDetailScreen() {
   const [players, setPlayers] = useState<MatchPlayerRow[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [confirmations, setConfirmations] = useState<ConfirmationRow[]>([]);
+  const [ratingHistory, setRatingHistory] = useState<SportRatingHistoryRow[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isWinnerUpdating, setIsWinnerUpdating] = useState(false);
@@ -152,10 +164,30 @@ export default function MatchDetailScreen() {
       return;
     }
 
+    let ratingHistoryRows: SportRatingHistoryRow[] = [];
+
+    if (matchRow.rating_applied) {
+      const { data: ratingData, error: ratingError } = await supabase
+        .from("sport_rating_history")
+        .select(
+          "match_id, user_id, level_before, level_after, delta, reliability_after"
+        )
+        .eq("match_id", matchId);
+
+      if (ratingError) {
+        Alert.alert("Match error", ratingError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      ratingHistoryRows = ratingData ?? [];
+    }
+
     setMatch(matchRow);
     setPlayers(matchPlayers ?? []);
     setProfiles(profileRows);
     setConfirmations(confirmationRows ?? []);
+    setRatingHistory(ratingHistoryRows);
     setIsLoading(false);
 
     if (matchRow.reported_by === data.user.id) {
@@ -200,6 +232,23 @@ export default function MatchDetailScreen() {
             Alert.alert("Match error", refreshError.message);
           } else if (refreshedMatch) {
             setMatch(refreshedMatch);
+
+            if (refreshedMatch.rating_applied) {
+              const { data: ratingData, error: ratingError } = await supabase
+                .from("sport_rating_history")
+                .select(
+                  "match_id, user_id, level_before, level_after, delta, reliability_after"
+                )
+                .eq("match_id", refreshedMatch.id);
+
+              if (ratingError) {
+                Alert.alert("Match error", ratingError.message);
+              } else {
+                setRatingHistory(ratingData ?? []);
+              }
+            } else {
+              setRatingHistory([]);
+            }
           }
         }
 
@@ -215,6 +264,10 @@ export default function MatchDetailScreen() {
   const profileMap = useMemo(() => {
     return new Map(profiles.map((profile) => [profile.id, profile]));
   }, [profiles]);
+
+  const ratingHistoryMap = useMemo(() => {
+    return new Map(ratingHistory.map((row) => [row.user_id, row]));
+  }, [ratingHistory]);
 
   const teamOne = useMemo(
     () => players.filter((player) => player.side === 1),
@@ -293,6 +346,29 @@ export default function MatchDetailScreen() {
       current ? { ...current, winner_side: side } : current
     );
     setIsWinnerUpdating(false);
+  };
+
+  const formatSignedDelta = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) {
+      return "—";
+    }
+    const formatted = Math.abs(value).toFixed(2);
+    return `${value >= 0 ? "+" : "-"}${formatted}`;
+  };
+
+  const formatLevel = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) {
+      return "—";
+    }
+    return value.toFixed(1);
+  };
+
+  const formatReliability = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) {
+      return "—";
+    }
+    const normalized = value <= 1 ? value * 100 : value;
+    return `${Math.round(normalized)}%`;
   };
 
   return (
@@ -401,6 +477,45 @@ export default function MatchDetailScreen() {
             ) : null}
           </View>
 
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ratings update</Text>
+            {!match.is_ranked ? (
+              <Text style={styles.helperText}>
+                This match was not ranked.
+              </Text>
+            ) : !match.rating_applied ? (
+              <Text style={styles.helperText}>
+                Ratings will update after everyone confirms.
+              </Text>
+            ) : (
+              players.map((player) => {
+                const ratingRow = ratingHistoryMap.get(player.user_id);
+                return (
+                  <View key={player.user_id} style={styles.ratingRow}>
+                    <Text style={styles.playerName}>
+                      {formatProfileName(
+                        profileMap.get(player.user_id) ?? {
+                          id: player.user_id,
+                          username: null,
+                          full_name: null
+                        }
+                      )}
+                    </Text>
+                    <Text style={styles.ratingDetail}>
+                      {formatSignedDelta(ratingRow?.delta ?? null)}
+                    </Text>
+                    <Text style={styles.ratingDetail}>
+                      {formatLevel(ratingRow?.level_after ?? null)}
+                    </Text>
+                    <Text style={styles.ratingDetail}>
+                      {formatReliability(ratingRow?.reliability_after ?? null)}
+                    </Text>
+                  </View>
+                );
+              })
+            )}
+          </View>
+
           {userConfirmation?.status === "pending" ? (
             <View style={styles.actionRow}>
               <TouchableOpacity
@@ -487,6 +602,17 @@ const styles = StyleSheet.create({
   confirmationStatus: {
     color: "#666",
     textTransform: "capitalize"
+  },
+  ratingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8
+  },
+  ratingDetail: {
+    color: "#333",
+    minWidth: 64,
+    textAlign: "right"
   },
   actionRow: {
     flexDirection: "row",
