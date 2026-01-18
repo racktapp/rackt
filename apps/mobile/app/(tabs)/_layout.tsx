@@ -16,6 +16,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="history"
+        options={{
+          title: "History"
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile"
@@ -25,6 +31,24 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: "Settings"
+        }}
+      />
+      <Tabs.Screen
+        name="report-match"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="pending"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="match/[id]"
+        options={{
+          href: null
         }}
       />
     </Tabs>
