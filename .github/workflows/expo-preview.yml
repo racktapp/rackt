@@ -18,16 +18,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.19.x
 
       - name: Install dependencies
         working-directory: apps/mobile
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          npm install --legacy-peer-deps
 
       - name: Create Expo env file
         working-directory: apps/mobile
