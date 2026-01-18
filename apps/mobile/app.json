@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "mobile",
-    "owner": "rackts-organization",
     "slug": "rackt",
+    "owner": "rackts-organization",
     "scheme": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,11 +10,11 @@
     "platforms": ["ios", "android", "web"],
     "plugins": ["expo-router"],
     "extra": {
-      "router": {
-        "origin": "app"
-      },
       "eas": {
         "projectId": "38428c85-907b-4b54-8954-6f0f43a1f1ec"
+      },
+      "router": {
+        "origin": "app"
       }
     }
   }
