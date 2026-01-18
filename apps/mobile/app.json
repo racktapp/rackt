@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "mobile",
-    "owner": "rackt",
+    "owner": "rackts-organization",
     "slug": "rackt",
     "scheme": "mobile",
     "version": "1.0.0",
