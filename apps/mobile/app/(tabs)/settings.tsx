@@ -13,6 +13,7 @@ import { supabase } from "../../lib/supabase";
 
 export default function SettingsScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -24,6 +25,36 @@ export default function SettingsScreen() {
     }
     router.replace("/(auth)/sign-in");
     setIsSigningOut(false);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This will permanently delete your account and cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeletingAccount(true);
+            const { error } = await supabase.rpc("delete_user_account");
+            if (error) {
+              Alert.alert("Delete failed", error.message);
+              setIsDeletingAccount(false);
+              return;
+            }
+
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) {
+              Alert.alert("Sign out failed", signOutError.message);
+            }
+            router.replace("/(auth)/sign-in");
+            setIsDeletingAccount(false);
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -38,7 +69,21 @@ export default function SettingsScreen() {
         {isSigningOut ? (
           <ActivityIndicator />
         ) : (
-          <Button title="Sign out" onPress={handleSignOut} />
+          <Button
+            title="Sign out"
+            onPress={handleSignOut}
+            disabled={isDeletingAccount}
+          />
+        )}
+        {isDeletingAccount ? (
+          <ActivityIndicator />
+        ) : (
+          <Button
+            title="Delete account"
+            onPress={handleDeleteAccount}
+            color="#dc2626"
+            disabled={isSigningOut}
+          />
         )}
       </View>
     </View>
