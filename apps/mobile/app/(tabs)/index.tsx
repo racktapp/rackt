@@ -83,6 +83,22 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push("/(tabs)/report-match")}
+        >
+          <Text style={styles.actionButtonText}>Report match</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButtonSecondary}
+          onPress={() => router.push("/(tabs)/pending")}
+        >
+          <Text style={styles.actionButtonSecondaryText}>
+            Pending confirmations
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {isLoading ? (
         <View style={styles.loadingState}>
@@ -147,6 +163,31 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     color: "#fff",
+    fontWeight: "600"
+  },
+  actionRow: {
+    gap: 12
+  },
+  actionButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#111",
+    alignItems: "center"
+  },
+  actionButtonText: {
+    color: "#fff",
+    fontWeight: "600"
+  },
+  actionButtonSecondary: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center"
+  },
+  actionButtonSecondaryText: {
+    color: "#111",
     fontWeight: "600"
   },
   loadingState: {
