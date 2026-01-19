@@ -9,6 +9,9 @@
     "userInterfaceStyle": "automatic",
     "platforms": ["ios", "android", "web"],
     "plugins": ["expo-router"],
+    "ios": {
+      "bundleIdentifier": "com.racktapp.rackt"
+    },
     "extra": {
       "eas": {
         "projectId": "bbe46497-27d5-4c40-bfbe-402b062ede98"
