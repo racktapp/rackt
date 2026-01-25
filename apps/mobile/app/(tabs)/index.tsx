@@ -11,6 +11,7 @@ import {
 import { router } from "expo-router";
 
 import { supabase } from "../../lib/supabase";
+import Scoreboard from "../../src/components/Scoreboard";
 
 type SportRating = {
   sport: string;
@@ -191,6 +192,8 @@ export default function HomeScreen() {
           <Text style={styles.actionButtonSecondaryText}>Match history</Text>
         </TouchableOpacity>
       </View>
+
+      <Scoreboard />
 
       <View style={styles.statsCard}>
         <Text style={styles.statsTitle}>Stats</Text>
