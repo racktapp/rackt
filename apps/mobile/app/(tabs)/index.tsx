@@ -191,6 +191,12 @@ export default function HomeScreen() {
         >
           <Text style={styles.actionButtonSecondaryText}>Match history</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButtonSecondary}
+          onPress={() => router.push("/controller-setup")}
+        >
+          <Text style={styles.actionButtonSecondaryText}>Controller setup</Text>
+        </TouchableOpacity>
       </View>
 
       <Scoreboard />
