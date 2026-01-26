@@ -1,4 +1,3 @@
-import { EventEmitter } from "expo-modules-core";
 import { useCallback, useEffect, useState } from "react";
 import RacktGamepad from "rackt-gamepad";
 
@@ -35,7 +34,14 @@ export type GamepadEvent =
   | GamepadButtonEvent
   | GamepadAxisEvent;
 
-const emitter = new EventEmitter(RacktGamepad);
+type GamepadEmitter = {
+  addListener: (
+    eventName: "onConnect" | "onDisconnect" | "onButton" | "onAxis",
+    listener: (payload: any) => void
+  ) => { remove: () => void };
+};
+
+const emitter = RacktGamepad as unknown as GamepadEmitter;
 
 export const getConnectedControllers = async (): Promise<ControllerInfo[]> => {
   if (typeof RacktGamepad.getConnectedControllers !== "function") {
