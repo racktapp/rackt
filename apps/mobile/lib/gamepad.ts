@@ -70,7 +70,7 @@ try {
 const moduleExports = nativeModule ?? fallbackModule;
 const isAvailable = isIos && moduleExports.available === true;
 const emitter = (isAvailable
-  ? new EventEmitter(moduleExports)
+  ? new EventEmitter(moduleExports as any)
   : moduleExports) as unknown as GamepadEmitter;
 
 export const gamepadAvailable = isAvailable;
