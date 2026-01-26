@@ -1,0 +1,13 @@
+{
+  "name": "rackt-gamepad",
+  "version": "0.1.0",
+  "description": "Local Expo module for controller input support.",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "expo": {
+    "platforms": ["ios", "android"]
+  },
+  "dependencies": {
+    "expo-modules-core": "^3.0.29"
+  }
+}

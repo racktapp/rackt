@@ -1,0 +1,10 @@
+{
+  "name": "rackt-gamepad",
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["RacktGamepadModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.racktgamepad.RacktGamepadModule"]
+  }
+}
