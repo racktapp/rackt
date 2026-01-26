@@ -28,7 +28,8 @@ export function startDiscovery(): void;
 export function stopDiscovery(): void;
 
 declare const RacktGamepad: {
-  getConnectedControllers: () => Promise<ControllerInfo[]>;
+  available: boolean;
+  getConnectedControllers?: () => Promise<ControllerInfo[]>;
   startDiscovery?: () => void;
   stopDiscovery?: () => void;
 };

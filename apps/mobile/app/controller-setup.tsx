@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 
-import { GamepadEvent, useGamepad } from "../lib/gamepad";
+import { GamepadEvent, gamepadAvailable, useGamepad } from "../lib/gamepad";
 
 const formatEvent = (event: GamepadEvent) => {
   switch (event.type) {
@@ -61,10 +61,10 @@ export default function ControllerSetupScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.card}>
-          <Text style={styles.subtitle}>Android support is coming soon.</Text>
+          <Text style={styles.subtitle}>iOS only for now.</Text>
           <Text style={styles.bodyText}>
-            This screen is iOS-only for now. Pair a controller on iOS to test live
-            input events.
+            This screen is iOS only for now. Pair a controller on iOS to test live
+            input events once the module is installed.
           </Text>
         </View>
       </ScrollView>
@@ -79,6 +79,16 @@ export default function ControllerSetupScreen() {
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
       </View>
+
+      {!gamepadAvailable && (
+        <View style={styles.card}>
+          <Text style={styles.subtitle}>Module not available</Text>
+          <Text style={styles.bodyText}>
+            Gamepad module not installed in this build. Rebuild the iOS
+            development client with EAS and reinstall.
+          </Text>
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Connect your controller (iOS only)</Text>
