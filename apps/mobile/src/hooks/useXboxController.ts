@@ -24,7 +24,7 @@ type GamepadButtonLike = {
 
 type GamepadLike = {
   id?: string;
-
+  buttons?: readonly GamepadButtonLike[];
 };
 
 const DEFAULT_LONG_PRESS_MS = 500;
