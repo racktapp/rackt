@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import RacktGamepad from "rackt-gamepad";
-import {
-  emitter as moduleEmitter,
-  getConnectedControllers as moduleGetConnectedControllers,
-  startDiscovery as moduleStartDiscovery
-} from "rackt-gamepad";
+import { requireNativeModule } from "expo-modules-core";
 
 type ControllerInfo = {
   vendorName: string;
@@ -47,25 +42,49 @@ type GamepadEmitter = {
   ) => { remove: () => void };
 };
 
+type RacktGamepadModule = {
+  available?: boolean;
+  getConnectedControllers?: () => Promise<ControllerInfo[]>;
+  startDiscovery?: () => void;
+};
+
 const isIos = Platform.OS === "ios";
-const isAvailable = isIos && RacktGamepad?.available !== false;
+let nativeModule: RacktGamepadModule | null = null;
+
+try {
+  nativeModule = requireNativeModule("RacktGamepad");
+} catch {
+  nativeModule = null;
+}
+
+const fallbackModule: RacktGamepadModule = {
+  available: false,
+  getConnectedControllers: async () => [],
+  startDiscovery: () => {}
+};
+
+const moduleExports = nativeModule ?? fallbackModule;
+const isAvailable = isIos && moduleExports.available === true;
 const fallbackEmitter: GamepadEmitter = {
   addListener: () => ({
     remove: () => {}
   })
 };
 const emitter = isAvailable
-  ? (moduleEmitter as unknown as GamepadEmitter)
+  ? (nativeModule as unknown as GamepadEmitter)
   : fallbackEmitter;
 
 export const gamepadAvailable = isAvailable;
 
 export const getConnectedControllers = async (): Promise<ControllerInfo[]> => {
-  if (!isAvailable || typeof moduleGetConnectedControllers !== "function") {
+  if (
+    !isAvailable ||
+    typeof moduleExports.getConnectedControllers !== "function"
+  ) {
     return [];
   }
   try {
-    const result = await moduleGetConnectedControllers();
+    const result = await moduleExports.getConnectedControllers();
     return result ?? [];
   } catch {
     return [];
@@ -73,8 +92,8 @@ export const getConnectedControllers = async (): Promise<ControllerInfo[]> => {
 };
 
 export const startDiscovery = () => {
-  if (isAvailable && typeof moduleStartDiscovery === "function") {
-    moduleStartDiscovery();
+  if (isAvailable && typeof moduleExports.startDiscovery === "function") {
+    moduleExports.startDiscovery();
   }
 };
 

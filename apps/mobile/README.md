@@ -34,7 +34,7 @@ development build (not Expo Go).
 
 ### Rebuild after native module changes
 
-After changing native modules you MUST rebuild:
+After adding or updating the rackt-gamepad native module you MUST rebuild:
 
 ```bash
 eas build --platform ios --profile development
@@ -69,6 +69,6 @@ Open the Rackt dev client app on your iPhone and it will connect to Metro.
 
 1. On iPhone, go to Settings → Bluetooth and pair your Xbox/PlayStation controller.
 2. In the app, tap **Controller setup** on the Home screen.
-3. Confirm **Status: Connected** and press buttons to see live event logs.
+3. Confirm the status shows **Connected** and press buttons to see live event logs.
 
 > Android support is coming soon; the screen shows a placeholder on Android.
