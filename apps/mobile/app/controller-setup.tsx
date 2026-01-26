@@ -84,8 +84,8 @@ export default function ControllerSetupScreen() {
         <View style={styles.card}>
           <Text style={styles.subtitle}>Module not available</Text>
           <Text style={styles.bodyText}>
-            Gamepad module not installed in this build. Rebuild the iOS
-            development client with EAS and reinstall.
+            Gamepad module not installed. Rebuild the iOS dev client and
+            reinstall.
           </Text>
         </View>
       )}

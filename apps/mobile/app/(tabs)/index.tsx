@@ -195,7 +195,7 @@ export default function HomeScreen() {
           style={styles.actionButtonSecondary}
           onPress={() => router.push("/controller-setup")}
         >
-          <Text style={styles.actionButtonSecondaryText}>Controller setup</Text>
+          <Text style={styles.actionButtonSecondaryText}>Controller Setup</Text>
         </TouchableOpacity>
       </View>
 
