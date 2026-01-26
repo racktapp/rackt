@@ -54,7 +54,9 @@ const fallbackEmitter: GamepadEmitter = {
     remove: () => {}
   })
 };
-const emitter = isAvailable ? (moduleEmitter as GamepadEmitter) : fallbackEmitter;
+const emitter = isAvailable
+  ? (moduleEmitter as unknown as GamepadEmitter)
+  : fallbackEmitter;
 
 export const gamepadAvailable = isAvailable;
 
