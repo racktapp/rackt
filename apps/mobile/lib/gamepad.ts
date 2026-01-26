@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { EventEmitter, requireNativeModule } from "expo-modules-core";
+import { requireNativeModule } from "expo-modules-core";
 
 type ControllerInfo = {
   vendorName: string;
@@ -57,12 +57,10 @@ try {
   nativeModule = null;
 }
 
-const fallbackModule = {
+const fallbackModule: RacktGamepadModule = {
   available: false,
   getConnectedControllers: async () => [],
-  addListener: () => ({
-    remove: () => {}
-  })
+  startDiscovery: () => {}
 };
 
 const moduleExports = nativeModule ?? fallbackModule;
@@ -72,9 +70,8 @@ const fallbackEmitter: GamepadEmitter = {
     remove: () => {}
   })
 };
-const moduleEmitter = nativeModule ? new EventEmitter(nativeModule) : null;
 const emitter = isAvailable
-  ? (moduleEmitter as unknown as GamepadEmitter)
+  ? (nativeModule as unknown as GamepadEmitter)
   : fallbackEmitter;
 
 export const gamepadAvailable = isAvailable;
