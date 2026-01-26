@@ -10,6 +10,10 @@ public class RacktGamepadModule: Module {
   public func definition() -> ModuleDefinition {
     Name("RacktGamepad")
 
+    Constants([
+      "available": true
+    ])
+
     Events("onConnect", "onDisconnect", "onButton", "onAxis")
 
     OnStartObserving {
