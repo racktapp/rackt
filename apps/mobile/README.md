@@ -32,6 +32,20 @@ Then choose a platform (iOS, Android, or Web) from the Expo DevTools.
 This app uses a native module for controller input, so you must use an EAS
 development build (not Expo Go).
 
+### Rebuild after native module changes
+
+After changing native modules you MUST rebuild:
+
+```bash
+eas build --platform ios --profile development
+```
+
+Then run:
+
+```bash
+npx expo start --dev-client --tunnel
+```
+
 ### Build and install the iOS dev client
 
 ```bash

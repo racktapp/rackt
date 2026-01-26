@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import RacktGamepad from "rackt-gamepad";
+import {
+  emitter as moduleEmitter,
+  getConnectedControllers as moduleGetConnectedControllers,
+  startDiscovery as moduleStartDiscovery
+} from "rackt-gamepad";
 
 type ControllerInfo = {
   vendorName: string;
@@ -41,19 +47,32 @@ type GamepadEmitter = {
   ) => { remove: () => void };
 };
 
-const emitter = RacktGamepad as unknown as GamepadEmitter;
+const isIos = Platform.OS === "ios";
+const isAvailable = isIos && RacktGamepad?.available !== false;
+const fallbackEmitter: GamepadEmitter = {
+  addListener: () => ({
+    remove: () => {}
+  })
+};
+const emitter = isAvailable ? (moduleEmitter as GamepadEmitter) : fallbackEmitter;
+
+export const gamepadAvailable = isAvailable;
 
 export const getConnectedControllers = async (): Promise<ControllerInfo[]> => {
-  if (typeof RacktGamepad.getConnectedControllers !== "function") {
+  if (!isAvailable || typeof moduleGetConnectedControllers !== "function") {
     return [];
   }
-  const result = await RacktGamepad.getConnectedControllers();
-  return result ?? [];
+  try {
+    const result = await moduleGetConnectedControllers();
+    return result ?? [];
+  } catch {
+    return [];
+  }
 };
 
 export const startDiscovery = () => {
-  if (typeof RacktGamepad.startDiscovery === "function") {
-    RacktGamepad.startDiscovery();
+  if (isAvailable && typeof moduleStartDiscovery === "function") {
+    moduleStartDiscovery();
   }
 };
 
@@ -93,6 +112,9 @@ export const useGamepad = () => {
   }, []);
 
   useEffect(() => {
+    if (!isAvailable) {
+      return;
+    }
     refreshConnected();
     startDiscovery();
 
