@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { requireNativeModule } from "expo-modules-core";
+import { EventEmitter, requireNativeModule } from "expo-modules-core";
 
 type ControllerInfo = {
   vendorName: string;
@@ -46,10 +46,20 @@ type RacktGamepadModule = {
   available?: boolean;
   getConnectedControllers?: () => Promise<ControllerInfo[]>;
   startDiscovery?: () => void;
+  addListener?: GamepadEmitter["addListener"];
 };
 
 const isIos = Platform.OS === "ios";
 let nativeModule: RacktGamepadModule | null = null;
+
+const fallbackModule: RacktGamepadModule & GamepadEmitter = {
+  available: false,
+  getConnectedControllers: async () => [],
+  startDiscovery: () => {},
+  addListener: () => ({
+    remove: () => {}
+  })
+};
 
 try {
   nativeModule = requireNativeModule("RacktGamepad");
@@ -57,22 +67,11 @@ try {
   nativeModule = null;
 }
 
-const fallbackModule: RacktGamepadModule = {
-  available: false,
-  getConnectedControllers: async () => [],
-  startDiscovery: () => {}
-};
-
 const moduleExports = nativeModule ?? fallbackModule;
 const isAvailable = isIos && moduleExports.available === true;
-const fallbackEmitter: GamepadEmitter = {
-  addListener: () => ({
-    remove: () => {}
-  })
-};
-const emitter = isAvailable
-  ? (nativeModule as unknown as GamepadEmitter)
-  : fallbackEmitter;
+const emitter = (isAvailable
+  ? new EventEmitter(moduleExports)
+  : moduleExports) as unknown as GamepadEmitter;
 
 export const gamepadAvailable = isAvailable;
 
