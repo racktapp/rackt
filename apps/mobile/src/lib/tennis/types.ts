@@ -3,6 +3,7 @@ export type Player = "A" | "B";
 export type MatchOptions = {
   bestOf?: 3 | 5;
   tiebreakAt6All?: boolean;
+  startingServer?: Player;
 };
 
 export type SetScore = {

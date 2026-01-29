@@ -1,119 +1,165 @@
-import { useMemo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { initialState, pointWonBy, reset } from "../src/lib/tennis/engine";
-import { TennisState } from "../src/lib/tennis/types";
+import { useState } from "react";
+import {
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { useRouter } from "expo-router";
+import { initialState } from "../src/lib/tennis/engine";
+import { Player } from "../src/lib/tennis/types";
+import {
+  MatchConfig,
+  saveMatch
+} from "../src/lib/storage/matchStorage";
 
-const pointLabel = (points: number): string => {
-  switch (points) {
-    case 0:
-      return "0";
-    case 1:
-      return "15";
-    case 2:
-      return "30";
-    case 3:
-      return "40";
-    default:
-      return "40";
-  }
-};
+export default function SetupMatch() {
+  const router = useRouter();
+  const [playerAName, setPlayerAName] = useState("Player A");
+  const [playerBName, setPlayerBName] = useState("Player B");
+  const [bestOf, setBestOf] = useState<3 | 5>(3);
+  const [tiebreakAt6All, setTiebreakAt6All] = useState(true);
+  const [startingServer, setStartingServer] = useState<Player>("A");
 
-const gameScoreLabel = (state: TennisState): string => {
-  const { gamePointsA, gamePointsB } = state;
-  if (gamePointsA >= 3 && gamePointsB >= 3) {
-    if (gamePointsA === gamePointsB) {
-      return "Deuce";
-    }
-    const leader = gamePointsA > gamePointsB ? "A" : "B";
-    return `Advantage ${leader}`;
-  }
-  return `${pointLabel(gamePointsA)} - ${pointLabel(gamePointsB)}`;
-};
-
-export default function Home() {
-  const [state, setState] = useState<TennisState>(() => initialState());
-  const [history, setHistory] = useState<TennisState[]>([]);
-
-  const setScore = useMemo(() => {
-    const current = state.sets[state.currentSet];
-    return `${current.gamesA} - ${current.gamesB}`;
-  }, [state]);
-
-  const handlePoint = (player: "A" | "B") => {
-    setHistory((prev) => [...prev, state]);
-    setState(pointWonBy(state, player));
-  };
-
-  const handleUndo = () => {
-    setHistory((prev) => {
-      if (prev.length === 0) {
-        return prev;
-      }
-      const nextHistory = [...prev];
-      const previous = nextHistory.pop();
-      if (previous) {
-        setState(previous);
-      }
-      return nextHistory;
+  const handleStartMatch = () => {
+    const config: MatchConfig = {
+      playerAName: playerAName.trim() || "Player A",
+      playerBName: playerBName.trim() || "Player B",
+      bestOf,
+      tiebreakAt6All,
+      startingServer
+    };
+    const tennisState = initialState({
+      bestOf: config.bestOf,
+      tiebreakAt6All: config.tiebreakAt6All,
+      startingServer: config.startingServer
     });
-  };
-
-  const handleReset = () => {
-    setState(reset());
-    setHistory([]);
+    saveMatch({ config, tennisState, history: [] });
+    router.push("/match");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tennis Scoring Demo</Text>
-      <View style={styles.scoreBlock}>
-        <Text style={styles.label}>Set Score</Text>
-        <Text style={styles.value}>{setScore}</Text>
+      <Text style={styles.title}>Match Setup</Text>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Player A Name</Text>
+        <TextInput
+          style={styles.input}
+          value={playerAName}
+          onChangeText={setPlayerAName}
+          placeholder="Player A"
+          placeholderTextColor="#7c8494"
+        />
       </View>
-      <View style={styles.scoreBlock}>
-        <Text style={styles.label}>Game Score</Text>
-        <Text style={styles.value}>{gameScoreLabel(state)}</Text>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Player B Name</Text>
+        <TextInput
+          style={styles.input}
+          value={playerBName}
+          onChangeText={setPlayerBName}
+          placeholder="Player B"
+          placeholderTextColor="#7c8494"
+        />
       </View>
-      {state.isTiebreak ? (
-        <View style={styles.scoreBlock}>
-          <Text style={styles.label}>Tie-break</Text>
-          <Text style={styles.value}>
-            {state.tiebreakPointsA} - {state.tiebreakPointsB}
-          </Text>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Match Format</Text>
+        <View style={styles.toggleRow}>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              bestOf === 3 && styles.toggleButtonActive
+            ]}
+            onPress={() => setBestOf(3)}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                bestOf === 3 && styles.toggleTextActive
+              ]}
+            >
+              Best of 3
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              bestOf === 5 && styles.toggleButtonActive
+            ]}
+            onPress={() => setBestOf(5)}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                bestOf === 5 && styles.toggleTextActive
+              ]}
+            >
+              Best of 5
+            </Text>
+          </TouchableOpacity>
         </View>
-      ) : null}
-      <View style={styles.scoreBlock}>
-        <Text style={styles.label}>Server</Text>
-        <Text style={styles.value}>{state.server}</Text>
       </View>
-      {state.matchWinner ? (
-        <View style={styles.scoreBlock}>
-          <Text style={styles.label}>Winner</Text>
-          <Text style={styles.value}>Player {state.matchWinner}</Text>
+
+      <View style={styles.section}>
+        <View style={styles.switchRow}>
+          <Text style={styles.label}>Tie-break at 6–6</Text>
+          <Switch
+            value={tiebreakAt6All}
+            onValueChange={setTiebreakAt6All}
+            trackColor={{ false: "#3b3f4a", true: "#2f80ed" }}
+            thumbColor="#f5f5f5"
+          />
         </View>
-      ) : null}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={() => handlePoint("A")}
-        >
-          <Text style={styles.buttonText}>Point A</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={() => handlePoint("B")}
-        >
-          <Text style={styles.buttonText}>Point B</Text>
-        </TouchableOpacity>
       </View>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button} onPress={handleUndo}>
-          <Text style={styles.secondaryButtonText}>Undo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleReset}>
-          <Text style={styles.secondaryButtonText}>Reset</Text>
-        </TouchableOpacity>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Starting Server</Text>
+        <View style={styles.toggleRow}>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              startingServer === "A" && styles.toggleButtonActive
+            ]}
+            onPress={() => setStartingServer("A")}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                startingServer === "A" && styles.toggleTextActive
+              ]}
+            >
+              {playerAName.trim() || "Player A"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              startingServer === "B" && styles.toggleButtonActive
+            ]}
+            onPress={() => setStartingServer("B")}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                startingServer === "B" && styles.toggleTextActive
+              ]}
+            >
+              {playerBName.trim() || "Player B"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <TouchableOpacity
+        style={styles.startButton}
+        onPress={handleStartMatch}
+      >
+        <Text style={styles.startButtonText}>Start Match</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -126,52 +172,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#0b0b0f"
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "700",
     color: "#fff",
     textAlign: "center",
     marginBottom: 24
   },
-  scoreBlock: {
-    marginBottom: 16,
-    alignItems: "center"
+  section: {
+    marginBottom: 18
   },
   label: {
     fontSize: 14,
     textTransform: "uppercase",
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     color: "#9da5b4",
-    marginBottom: 6
+    marginBottom: 8
   },
-  value: {
-    fontSize: 24,
-    fontWeight: "600",
+  input: {
+    backgroundColor: "#1c1f26",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
     color: "#fff"
   },
-  buttonRow: {
+  toggleRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12
+    gap: 12
   },
-  button: {
+  toggleButton: {
     flex: 1,
-    paddingVertical: 16,
-    marginHorizontal: 8,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: "#1c1f26",
     alignItems: "center"
   },
-  primaryButton: {
+  toggleButtonActive: {
     backgroundColor: "#2f80ed"
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
+  toggleText: {
+    color: "#c7ccd8",
+    fontSize: 15,
     fontWeight: "600"
   },
-  secondaryButtonText: {
-    color: "#d0d4dc",
-    fontSize: 16,
-    fontWeight: "500"
+  toggleTextActive: {
+    color: "#fff"
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  startButton: {
+    marginTop: 16,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: "#2f80ed",
+    alignItems: "center"
+  },
+  startButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700"
   }
 });
