@@ -2,7 +2,8 @@ import { MatchOptions, Player, SetScore, TennisState } from "./types";
 
 const DEFAULT_OPTIONS: Required<MatchOptions> = {
   bestOf: 3,
-  tiebreakAt6All: true
+  tiebreakAt6All: true,
+  startingServer: "A"
 };
 
 const otherPlayer = (player: Player): Player => (player === "A" ? "B" : "A");
