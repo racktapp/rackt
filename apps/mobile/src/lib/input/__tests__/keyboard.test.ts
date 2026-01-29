@@ -13,11 +13,19 @@ describe("keyboard helpers", () => {
   });
 
   it("detects editable targets", () => {
-    expect(isEditableTarget({ tagName: "INPUT" } as EventTarget)).toBe(true);
-    expect(isEditableTarget({ tagName: "textarea" } as EventTarget)).toBe(true);
     expect(
-      isEditableTarget({ isContentEditable: true } as EventTarget)
+      isEditableTarget({ tagName: "INPUT" } as unknown as EventTarget)
     ).toBe(true);
-    expect(isEditableTarget({ tagName: "div" } as EventTarget)).toBe(false);
+    expect(
+      isEditableTarget({ tagName: "textarea" } as unknown as EventTarget)
+    ).toBe(true);
+    expect(
+      isEditableTarget(
+        { isContentEditable: true } as unknown as EventTarget
+      )
+    ).toBe(true);
+    expect(
+      isEditableTarget({ tagName: "div" } as unknown as EventTarget)
+    ).toBe(false);
   });
 });
