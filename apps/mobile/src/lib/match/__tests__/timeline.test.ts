@@ -97,8 +97,8 @@ describe("deriveTimelineEvent", () => {
 describe("applyTimelineUpdate", () => {
   it("removes the latest event when undoing", () => {
     const timeline = [
-      { id: "1", ts: 1, type: "POINT", label: "Point won" },
-      { id: "2", ts: 2, type: "GAME", label: "Game won" }
+      { id: "1", ts: 1, type: "POINT" as const, label: "Point won" },
+      { id: "2", ts: 2, type: "GAME" as const, label: "Game won" }
     ];
 
     const updated = applyTimelineUpdate(
