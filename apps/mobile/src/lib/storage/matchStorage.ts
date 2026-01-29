@@ -7,6 +7,7 @@ export type MatchConfig = {
   bestOf: 3 | 5;
   tiebreakAt6All: boolean;
   startingServer: Player;
+  startTime: number;
 };
 
 export type StoredMatch = {
@@ -42,6 +43,10 @@ export const loadMatch = (): StoredMatch | null => {
     const parsed = JSON.parse(raw) as StoredMatch;
     return {
       ...parsed,
+      config: {
+        ...parsed.config,
+        startTime: parsed.config?.startTime ?? Date.now()
+      },
       timeline: parsed.timeline ?? []
     };
   } catch {
