@@ -42,7 +42,8 @@ describe("matchStorage", () => {
       playerBName: "Player B",
       bestOf: 3,
       tiebreakAt6All: true,
-      startingServer: "A"
+      startingServer: "A",
+      startTime: Date.now()
     };
     const tennisState = initialState({
       bestOf: config.bestOf,
@@ -64,7 +65,8 @@ describe("matchStorage", () => {
       playerBName: "Player B",
       bestOf: 3,
       tiebreakAt6All: true,
-      startingServer: "A"
+      startingServer: "A",
+      startTime: Date.now()
     };
     const tennisState = initialState();
     saveMatch({ config, tennisState, history: [], timeline: [] });

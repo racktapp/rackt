@@ -29,7 +29,8 @@ export default function SetupMatch() {
       playerBName: playerBName.trim() || "Player B",
       bestOf,
       tiebreakAt6All,
-      startingServer
+      startingServer,
+      startTime: Date.now()
     };
     const tennisState = initialState({
       bestOf: config.bestOf,

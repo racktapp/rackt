@@ -108,6 +108,7 @@ export default function MatchScreen() {
   const [inputEnabled, setInputEnabled] = useState(true);
   const [controllerExpanded, setControllerExpanded] = useState(false);
   const [timelineExpanded, setTimelineExpanded] = useState(true);
+  const hasAutoNavigated = useRef(false);
 
   useEffect(() => {
     const stored = loadMatch();
@@ -127,6 +128,17 @@ export default function MatchScreen() {
     }
     saveMatch({ config, tennisState: state, history, timeline });
   }, [config, history, state, timeline]);
+
+  useEffect(() => {
+    if (!state?.matchWinner) {
+      return;
+    }
+    if (hasAutoNavigated.current) {
+      return;
+    }
+    hasAutoNavigated.current = true;
+    router.replace("/summary");
+  }, [router, state?.matchWinner]);
 
   const currentSet = useMemo(() => {
     if (!state) {
@@ -185,6 +197,9 @@ export default function MatchScreen() {
     if (!config) {
       return;
     }
+    setConfig((prev) =>
+      prev ? { ...prev, startTime: Date.now() } : prev
+    );
     setState(
       reset({
         bestOf: config.bestOf,
@@ -316,6 +331,8 @@ export default function MatchScreen() {
       </View>
     );
   }
+
+  const matchFinished = Boolean(state.matchWinner);
 
   return (
     <View style={styles.container}>
@@ -554,28 +571,47 @@ export default function MatchScreen() {
       </ScrollView>
 
       <View style={styles.actionBar}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonPrimary]}
-          onPress={() => handleAction({ type: "POINT_A" })}
-        >
-          <Text style={styles.actionButtonText}>
-            Point {config.playerAName}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonSecondary]}
-          onPress={() => handleAction({ type: "UNDO" })}
-        >
-          <Text style={styles.actionButtonText}>Undo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonPrimary]}
-          onPress={() => handleAction({ type: "POINT_B" })}
-        >
-          <Text style={styles.actionButtonText}>
-            Point {config.playerBName}
-          </Text>
-        </TouchableOpacity>
+        {matchFinished ? (
+          <>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.actionButtonPrimary]}
+              onPress={() => router.replace("/summary")}
+            >
+              <Text style={styles.actionButtonText}>View Summary</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.actionButtonSecondary]}
+              onPress={handleReset}
+            >
+              <Text style={styles.actionButtonText}>New Match</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.actionButtonPrimary]}
+              onPress={() => handleAction({ type: "POINT_A" })}
+            >
+              <Text style={styles.actionButtonText}>
+                Point {config.playerAName}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.actionButtonSecondary]}
+              onPress={() => handleAction({ type: "UNDO" })}
+            >
+              <Text style={styles.actionButtonText}>Undo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.actionButtonPrimary]}
+              onPress={() => handleAction({ type: "POINT_B" })}
+            >
+              <Text style={styles.actionButtonText}>
+                Point {config.playerBName}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
