@@ -1,3 +1,4 @@
+import { TimelineEvent } from "../match/timeline";
 import { Player, TennisState } from "../tennis/types";
 
 export type MatchConfig = {
@@ -12,6 +13,7 @@ export type StoredMatch = {
   config: MatchConfig;
   tennisState: TennisState;
   history: TennisState[];
+  timeline: TimelineEvent[];
 };
 
 const STORAGE_KEY = "rackt.match";
@@ -37,7 +39,11 @@ export const loadMatch = (): StoredMatch | null => {
     return null;
   }
   try {
-    return JSON.parse(raw) as StoredMatch;
+    const parsed = JSON.parse(raw) as StoredMatch;
+    return {
+      ...parsed,
+      timeline: parsed.timeline ?? []
+    };
   } catch {
     return null;
   }

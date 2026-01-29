@@ -36,7 +36,7 @@ export default function SetupMatch() {
       tiebreakAt6All: config.tiebreakAt6All,
       startingServer: config.startingServer
     });
-    saveMatch({ config, tennisState, history: [] });
+    saveMatch({ config, tennisState, history: [], timeline: [] });
     router.push("/match");
   };
 
