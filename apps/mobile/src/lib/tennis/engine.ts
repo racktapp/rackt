@@ -2,7 +2,8 @@ import { MatchOptions, Player, SetScore, TennisState } from "./types";
 
 const DEFAULT_OPTIONS: Required<MatchOptions> = {
   bestOf: 3,
-  tiebreakAt6All: true
+  tiebreakAt6All: true,
+  startingServer: "A"
 };
 
 const otherPlayer = (player: Player): Player => (player === "A" ? "B" : "A");
@@ -57,6 +58,7 @@ const countSetsWon = (sets: SetScore[]): { winsA: number; winsB: number } => {
 
 export const initialState = (options: MatchOptions = {}): TennisState => {
   const resolved = { ...DEFAULT_OPTIONS, ...options };
+  const startingServer = resolved.startingServer ?? "A";
   return {
     bestOf: resolved.bestOf,
     tiebreakAt6All: resolved.tiebreakAt6All,
@@ -67,7 +69,7 @@ export const initialState = (options: MatchOptions = {}): TennisState => {
     isTiebreak: false,
     tiebreakPointsA: 0,
     tiebreakPointsB: 0,
-    server: "A"
+    server: startingServer
   };
 };
 
