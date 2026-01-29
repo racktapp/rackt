@@ -49,12 +49,13 @@ describe("matchStorage", () => {
       tiebreakAt6All: config.tiebreakAt6All,
       startingServer: config.startingServer
     });
-    saveMatch({ config, tennisState, history: [] });
+    saveMatch({ config, tennisState, history: [], timeline: [] });
 
     const loaded = loadMatch();
     expect(loaded).not.toBeNull();
     expect(loaded?.config).toEqual(config);
     expect(loaded?.tennisState.server).toBe("A");
+    expect(loaded?.timeline).toEqual([]);
   });
 
   it("clears saved match data", () => {
@@ -66,7 +67,7 @@ describe("matchStorage", () => {
       startingServer: "A"
     };
     const tennisState = initialState();
-    saveMatch({ config, tennisState, history: [] });
+    saveMatch({ config, tennisState, history: [], timeline: [] });
 
     clearMatch();
     expect(loadMatch()).toBeNull();
