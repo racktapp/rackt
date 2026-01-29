@@ -83,14 +83,6 @@ export default function MatchScreen() {
     return `${config.playerAName} ${current.gamesA} - ${current.gamesB} ${config.playerBName}`;
   }, [config, state]);
 
-  if (!config || !state) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.label}>Loading match...</Text>
-      </View>
-    );
-  }
-
   const resetScores = useCallback(() => {
     if (!config) {
       return;
@@ -181,6 +173,14 @@ export default function MatchScreen() {
     { label: "Reset match", key: "R" },
     { label: "Toggle input", key: "I" }
   ];
+
+  if (!config || !state) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>Loading match...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
