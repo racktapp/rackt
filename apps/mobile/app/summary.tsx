@@ -101,7 +101,7 @@ export default function SummaryScreen() {
   };
 
   const handleSaveCard = async () => {
-    if (!summary) {
+    if (!summary || !match) {
       return;
     }
     if (Platform.OS !== "web") {
