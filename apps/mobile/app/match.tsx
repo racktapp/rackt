@@ -25,6 +25,11 @@ import {
   deriveTimelineEvent,
   TimelineEvent
 } from "../src/lib/match/timeline";
+import {
+  getPressure,
+  PressureIndicator,
+  PressureType
+} from "../src/lib/match/pressure";
 
 const pointLabel = (points: number): string => {
   switch (points) {
@@ -54,24 +59,31 @@ const pointDisplay = (state: TennisState, player: Player): string => {
 };
 
 const gameScoreLabel = (state: TennisState): string => {
-  const { gamePointsA, gamePointsB } = state;
+  const { gamePointsA, gamePointsB, server } = state;
   if (gamePointsA >= 3 && gamePointsB >= 3) {
     if (gamePointsA === gamePointsB) {
       return "Deuce";
     }
     const leader = gamePointsA > gamePointsB ? "A" : "B";
-    return `Advantage ${leader}`;
+    return leader === server ? "Ad In" : "Ad Out";
   }
-  return `${pointLabel(gamePointsA)} - ${pointLabel(gamePointsB)}`;
+  return `${pointLabel(gamePointsA)}–${pointLabel(gamePointsB)}`;
 };
 
 const serverLabel = (server: Player, config: MatchConfig): string =>
   server === "A" ? config.playerAName : config.playerBName;
 
-const useHighlight = (value: string | number) => {
+const useScorePulse = (value: string | number) => {
   const animation = useRef(new Animated.Value(0)).current;
+  const previousValue = useRef(value);
+  const [changed, setChanged] = useState(false);
 
   useEffect(() => {
+    if (previousValue.current === value) {
+      return;
+    }
+    previousValue.current = value;
+    setChanged(true);
     Animated.sequence([
       Animated.timing(animation, {
         toValue: 1,
@@ -84,19 +96,43 @@ const useHighlight = (value: string | number) => {
         useNativeDriver: false
       })
     ]).start();
+    const timeout = setTimeout(() => setChanged(false), 420);
+    return () => clearTimeout(timeout);
   }, [animation, value]);
-
-  const backgroundColor = animation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["#151923", "#2f80ed"]
-  });
 
   const borderColor = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: ["#2a2f3a", "#7fb4ff"]
+    outputRange: ["#2a2f3a", "#6aa7ff"]
   });
 
-  return { backgroundColor, borderColor };
+  const scale = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.04]
+  });
+
+  return { pulseStyle: { borderColor, transform: [{ scale }] }, changed };
+};
+
+const pressureLabel: Record<PressureType, string> = {
+  MATCH_POINT: "Match Point",
+  SET_POINT: "Set Point",
+  BREAK_POINT: "Break Point"
+};
+
+const PressureBadge = ({ indicator }: { indicator: PressureIndicator }) => {
+  const badgeStyle =
+    indicator.type === "MATCH_POINT"
+      ? styles.pressureBadgeMatch
+      : indicator.type === "SET_POINT"
+        ? styles.pressureBadgeSet
+        : styles.pressureBadgeBreak;
+  return (
+    <View style={[styles.pressureBadge, badgeStyle]}>
+      <Text style={styles.pressureBadgeText}>
+        {pressureLabel[indicator.type]}
+      </Text>
+    </View>
+  );
 };
 
 export default function MatchScreen() {
@@ -161,11 +197,16 @@ export default function MatchScreen() {
     if (state.isTiebreak) {
       return `Tie-break • ${state.tiebreakPointsA}–${state.tiebreakPointsB}`;
     }
-    const gameNumber = currentSet.gamesA + currentSet.gamesB + 1;
-    return `Set ${state.currentSet + 1} • Game ${gameNumber} • ${gameScoreLabel(
+    const setScore = `${currentSet.gamesA}–${currentSet.gamesB}`;
+    return `Set ${state.currentSet + 1} • ${setScore} • ${gameScoreLabel(
       state
     )}`;
   }, [config, currentSet, state]);
+
+  const pressure = useMemo(
+    () => (state && config ? getPressure(state, config) : null),
+    [config, state]
+  );
 
   const gamesAValue = currentSet?.gamesA ?? 0;
   const gamesBValue = currentSet?.gamesB ?? 0;
@@ -188,10 +229,10 @@ export default function MatchScreen() {
         ? pointDisplay(state, "B")
         : "0";
 
-  const gamesAHighlight = useHighlight(gamesAValue);
-  const gamesBHighlight = useHighlight(gamesBValue);
-  const pointsAHighlight = useHighlight(pointsALabel);
-  const pointsBHighlight = useHighlight(pointsBLabel);
+  const gamesAPulse = useScorePulse(gamesAValue);
+  const gamesBPulse = useScorePulse(gamesBValue);
+  const pointsAPulse = useScorePulse(pointsALabel);
+  const pointsBPulse = useScorePulse(pointsBLabel);
 
   const resetScores = useCallback(() => {
     if (!config) {
@@ -359,9 +400,12 @@ export default function MatchScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.statusValue}>{matchStatus}</Text>
-          <Text style={styles.serverLine}>
-            Serving: {serverLabel(state.server, config)}
-          </Text>
+          <View style={styles.servingLine}>
+            <View style={styles.servingDot} />
+            <Text style={styles.serverLine}>
+              Serving {serverLabel(state.server, config)}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.playerCard}>
@@ -376,6 +420,15 @@ export default function MatchScreen() {
                 ]}
               />
               <Text style={styles.playerName}>{config.playerAName}</Text>
+              {state.server === "A" ? (
+                <View style={styles.servingBadge}>
+                  <View style={styles.servingBadgeDot} />
+                  <Text style={styles.servingBadgeText}>Serving</Text>
+                </View>
+              ) : null}
+              {pressure?.player === "A" ? (
+                <PressureBadge indicator={pressure} />
+              ) : null}
             </View>
             <View style={styles.setRow}>
               {state.sets.map((set, index) => (
@@ -398,7 +451,8 @@ export default function MatchScreen() {
                 style={[
                   styles.scoreValueBox,
                   styles.gamesBox,
-                  gamesAHighlight
+                  gamesAPulse.pulseStyle,
+                  gamesAPulse.changed && styles.scoreValueChanged
                 ]}
               >
                 <Text style={styles.gamesValue}>{gamesAValue}</Text>
@@ -412,7 +466,8 @@ export default function MatchScreen() {
                 style={[
                   styles.scoreValueBox,
                   styles.pointsBox,
-                  pointsAHighlight
+                  pointsAPulse.pulseStyle,
+                  pointsAPulse.changed && styles.scoreValueChanged
                 ]}
               >
                 <Text style={styles.pointsValue}>{pointsALabel}</Text>
@@ -433,6 +488,15 @@ export default function MatchScreen() {
                 ]}
               />
               <Text style={styles.playerName}>{config.playerBName}</Text>
+              {state.server === "B" ? (
+                <View style={styles.servingBadge}>
+                  <View style={styles.servingBadgeDot} />
+                  <Text style={styles.servingBadgeText}>Serving</Text>
+                </View>
+              ) : null}
+              {pressure?.player === "B" ? (
+                <PressureBadge indicator={pressure} />
+              ) : null}
             </View>
             <View style={styles.setRow}>
               {state.sets.map((set, index) => (
@@ -455,7 +519,8 @@ export default function MatchScreen() {
                 style={[
                   styles.scoreValueBox,
                   styles.gamesBox,
-                  gamesBHighlight
+                  gamesBPulse.pulseStyle,
+                  gamesBPulse.changed && styles.scoreValueChanged
                 ]}
               >
                 <Text style={styles.gamesValue}>{gamesBValue}</Text>
@@ -469,7 +534,8 @@ export default function MatchScreen() {
                 style={[
                   styles.scoreValueBox,
                   styles.pointsBox,
-                  pointsBHighlight
+                  pointsBPulse.pulseStyle,
+                  pointsBPulse.changed && styles.scoreValueChanged
                 ]}
               >
                 <Text style={styles.pointsValue}>{pointsBLabel}</Text>
@@ -677,10 +743,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 10
   },
+  servingLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10
+  },
   serverLine: {
     color: "#9da5b4",
-    fontSize: 13,
-    marginTop: 8
+    fontSize: 13
+  },
+  servingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: "#2ecc71"
   },
   resetScoreButton: {
     paddingHorizontal: 10,
@@ -711,12 +788,58 @@ const styles = StyleSheet.create({
   playerNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10
+    gap: 10,
+    flexWrap: "wrap"
   },
   playerName: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "700"
+  },
+  servingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#2a2f3a",
+    backgroundColor: "#151923"
+  },
+  servingBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: "#2ecc71"
+  },
+  servingBadgeText: {
+    color: "#d0d4dc",
+    fontSize: 11,
+    fontWeight: "600"
+  },
+  pressureBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#2a2f3a",
+    backgroundColor: "#151923"
+  },
+  pressureBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2
+  },
+  pressureBadgeBreak: {
+    borderColor: "#2f80ed"
+  },
+  pressureBadgeSet: {
+    borderColor: "#7fb4ff"
+  },
+  pressureBadgeMatch: {
+    borderColor: "#ff8b8b"
   },
   serverDot: {
     width: 10,
@@ -773,6 +896,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2a2f3a",
     alignItems: "center"
+  },
+  scoreValueChanged: {
+    shadowColor: "#7fb4ff",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3
   },
   gamesBox: {
     backgroundColor: "#151923"
