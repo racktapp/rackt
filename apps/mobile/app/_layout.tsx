@@ -1,4 +1,10 @@
 import { Stack } from "expo-router";
+
+import { SettingsProvider } from "../src/components/SettingsProvider";
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <SettingsProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </SettingsProvider>
+  );
 }

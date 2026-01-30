@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+import SettingsDrawer from "./SettingsDrawer";
+import { ThemeColors, useSettings } from "./SettingsProvider";
+import { triggerHaptics } from "../lib/feedback/haptics";
+import { playSound } from "../lib/feedback/sound";
 import { useXboxController } from "../hooks/useXboxController";
 
 type ScoreSnapshot = {
@@ -9,10 +13,14 @@ type ScoreSnapshot = {
 };
 
 export default function Scoreboard() {
+  const { settings, colors } = useSettings();
   const [scoreA, setScoreA] = useState(0);
   const [scoreB, setScoreB] = useState(0);
   const [history, setHistory] = useState<ScoreSnapshot[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const pushHistory = useCallback(() => {
     setHistory((prev) => [...prev, { scoreA, scoreB }]);
@@ -22,13 +30,17 @@ export default function Scoreboard() {
     pushHistory();
     setScoreA((prev) => prev + 1);
     setStatusMessage("Player A scored +1");
-  }, [pushHistory]);
+    triggerHaptics(settings, "point");
+    playSound(settings, "point");
+  }, [pushHistory, settings]);
 
   const incrementB = useCallback(() => {
     pushHistory();
     setScoreB((prev) => prev + 1);
     setStatusMessage("Player B scored +1");
-  }, [pushHistory]);
+    triggerHaptics(settings, "point");
+    playSound(settings, "point");
+  }, [pushHistory, settings]);
 
   const undoLastAction = useCallback(() => {
     setHistory((prev) => {
@@ -43,10 +55,12 @@ export default function Scoreboard() {
         setScoreA(last.scoreA);
         setScoreB(last.scoreB);
         setStatusMessage("Last action undone");
+        triggerHaptics(settings, "undo");
+        playSound(settings, "undo");
       }
       return nextHistory;
     });
-  }, []);
+  }, [settings]);
 
   const captureHighlight = useCallback(() => {
     setStatusMessage("Highlight captured");
@@ -73,14 +87,22 @@ export default function Scoreboard() {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Live Scoreboard</Text>
-        {isConnected ? (
-          <View style={styles.connectionBadge}>
-            <View style={styles.connectionDot} />
-            <Text style={styles.connectionText}>Controller connected</Text>
-          </View>
-        ) : (
-          <Text style={styles.connectionHint}>Controller disconnected</Text>
-        )}
+        <View style={styles.headerActions}>
+          {isConnected ? (
+            <View style={styles.connectionBadge}>
+              <View style={styles.connectionDot} />
+              <Text style={styles.connectionText}>Controller connected</Text>
+            </View>
+          ) : (
+            <Text style={styles.connectionHint}>Controller disconnected</Text>
+          )}
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setSettingsOpen(true)}
+          >
+            <Text style={styles.settingsButtonText}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.scoreRow}>
@@ -104,106 +126,139 @@ export default function Scoreboard() {
         <TouchableOpacity style={styles.secondaryButton} onPress={undoLastAction}>
           <Text style={styles.secondaryButtonText}>Undo (hold A)</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={captureHighlight}>
-          <Text style={styles.secondaryButtonText}>Capture highlight (hold B)</Text>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={captureHighlight}
+        >
+          <Text style={styles.secondaryButtonText}>
+            Capture highlight (hold B)
+          </Text>
         </TouchableOpacity>
       </View>
 
       <Text style={styles.statusText}>{statusText}</Text>
+
+      <SettingsDrawer
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
-    padding: 16,
-    gap: 16
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  connectionBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#e6f6ed",
-    gap: 6
-  },
-  connectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "#1d7a46"
-  },
-  connectionText: {
-    color: "#1d7a46",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  connectionHint: {
-    fontSize: 12,
-    color: "#777"
-  },
-  scoreRow: {
-    flexDirection: "row",
-    gap: 16
-  },
-  scoreColumn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    gap: 8
-  },
-  playerLabel: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "600"
-  },
-  scoreValue: {
-    fontSize: 32,
-    fontWeight: "700"
-  },
-  scoreButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#111"
-  },
-  scoreButtonText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  actionRow: {
-    gap: 8
-  },
-  secondaryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd"
-  },
-  secondaryButtonText: {
-    fontWeight: "600",
-    textAlign: "center",
-    color: "#333"
-  },
-  statusText: {
-    fontSize: 12,
-    color: "#666"
-  }
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      gap: 16,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8
+    },
+    settingsButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    settingsButtonText: {
+      fontSize: 14
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text
+    },
+    connectionBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: "#e6f6ed",
+      gap: 6
+    },
+    connectionDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 999,
+      backgroundColor: "#1d7a46"
+    },
+    connectionText: {
+      color: "#1d7a46",
+      fontSize: 12,
+      fontWeight: "600"
+    },
+    connectionHint: {
+      fontSize: 12,
+      color: colors.muted
+    },
+    scoreRow: {
+      flexDirection: "row",
+      gap: 16
+    },
+    scoreColumn: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      gap: 8
+    },
+    playerLabel: {
+      fontSize: 14,
+      color: colors.muted,
+      fontWeight: "600"
+    },
+    scoreValue: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: colors.text
+    },
+    scoreButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: colors.text
+    },
+    scoreButtonText: {
+      color: colors.surface,
+      fontWeight: "600"
+    },
+    actionRow: {
+      gap: 8
+    },
+    secondaryButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    secondaryButtonText: {
+      fontWeight: "600",
+      textAlign: "center",
+      color: colors.text
+    },
+    statusText: {
+      fontSize: 12,
+      color: colors.muted
+    }
+  });

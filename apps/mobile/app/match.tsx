@@ -30,6 +30,10 @@ import {
   PressureIndicator,
   PressureType
 } from "../src/lib/match/pressure";
+import SettingsDrawer from "../src/components/SettingsDrawer";
+import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
+import { triggerHaptics } from "../src/lib/feedback/haptics";
+import { playSound } from "../src/lib/feedback/sound";
 
 const pointLabel = (points: number): string => {
   switch (points) {
@@ -137,6 +141,7 @@ const PressureBadge = ({ indicator }: { indicator: PressureIndicator }) => {
 
 export default function MatchScreen() {
   const router = useRouter();
+  const { settings, colors } = useSettings();
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [state, setState] = useState<TennisState | null>(null);
   const [history, setHistory] = useState<TennisState[]>([]);
@@ -144,7 +149,10 @@ export default function MatchScreen() {
   const [inputEnabled, setInputEnabled] = useState(true);
   const [controllerExpanded, setControllerExpanded] = useState(false);
   const [timelineExpanded, setTimelineExpanded] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const hasAutoNavigated = useRef(false);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     const stored = loadMatch();
@@ -238,6 +246,7 @@ export default function MatchScreen() {
     if (!config) {
       return;
     }
+    triggerHaptics(settings, "reset");
     setConfig((prev) =>
       prev ? { ...prev, startTime: Date.now() } : prev
     );
@@ -250,7 +259,7 @@ export default function MatchScreen() {
     );
     setHistory([]);
     setTimeline([]);
-  }, [config]);
+  }, [config, settings]);
 
   const confirmResetScores = useCallback(() => {
     if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -287,16 +296,20 @@ export default function MatchScreen() {
         setTimeline((timelinePrev) =>
           applyTimelineUpdate(timelinePrev, { type: "UNDO" }, null)
         );
+        triggerHaptics(settings, "undo");
+        playSound(settings, "undo");
       }
       return nextHistory;
     });
-  }, []);
+  }, [settings]);
 
   const handleAction = useCallback(
     (action: InputAction) => {
       switch (action.type) {
         case "POINT_A":
         case "POINT_B": {
+          triggerHaptics(settings, "point");
+          playSound(settings, "point");
           setState((prev) => {
             if (!prev) {
               return prev;
@@ -326,7 +339,7 @@ export default function MatchScreen() {
           break;
       }
     },
-    [confirmResetScores, handleUndo]
+    [confirmResetScores, handleUndo, settings]
   );
 
   useKeyboardControls({ enabled: inputEnabled, onAction: handleAction });
@@ -382,7 +395,15 @@ export default function MatchScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Scoreboard</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Scoreboard</Text>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setSettingsOpen(true)}
+            >
+              <Text style={styles.settingsButtonText}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.subTitle}>
             Best of {config.bestOf} • Tie-break{" "}
             {config.tiebreakAt6All ? "On" : "Off"}
@@ -643,7 +664,11 @@ export default function MatchScreen() {
               style={[styles.actionButton, styles.actionButtonPrimary]}
               onPress={() => router.replace("/summary")}
             >
-              <Text style={styles.actionButtonText}>View Summary</Text>
+              <Text
+                style={[styles.actionButtonText, styles.actionButtonTextLight]}
+              >
+                View Summary
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.actionButtonSecondary]}
@@ -658,7 +683,9 @@ export default function MatchScreen() {
               style={[styles.actionButton, styles.actionButtonPrimary]}
               onPress={() => handleAction({ type: "POINT_A" })}
             >
-              <Text style={styles.actionButtonText}>
+              <Text
+                style={[styles.actionButtonText, styles.actionButtonTextLight]}
+              >
                 Point {config.playerAName}
               </Text>
             </TouchableOpacity>
@@ -672,453 +699,482 @@ export default function MatchScreen() {
               style={[styles.actionButton, styles.actionButtonPrimary]}
               onPress={() => handleAction({ type: "POINT_B" })}
             >
-              <Text style={styles.actionButtonText}>
+              <Text
+                style={[styles.actionButtonText, styles.actionButtonTextLight]}
+              >
                 Point {config.playerBName}
               </Text>
             </TouchableOpacity>
           </>
         )}
       </View>
+
+      <SettingsDrawer
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0b0b0f"
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 140,
-    gap: 18
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 6
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff"
-  },
-  subTitle: {
-    marginTop: 6,
-    textAlign: "center",
-    color: "#9da5b4"
-  },
-  label: {
-    fontSize: 14,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
-    color: "#9da5b4",
-    marginBottom: 6
-  },
-  value: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#fff"
-  },
-  statusCard: {
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#12151c",
-    borderWidth: 1,
-    borderColor: "#242a36"
-  },
-  statusHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  statusLabel: {
-    color: "#9da5b4",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 1
-  },
-  statusValue: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 10
-  },
-  servingLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 10
-  },
-  serverLine: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  servingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "#2ecc71"
-  },
-  resetScoreButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#2f3947"
-  },
-  resetScoreText: {
-    color: "#d0d4dc",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  playerCard: {
-    borderRadius: 18,
-    padding: 18,
-    backgroundColor: "#11141b",
-    borderWidth: 1,
-    borderColor: "#242a36",
-    gap: 16
-  },
-  playerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12
-  },
-  playerNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap"
-  },
-  playerName: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  servingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    backgroundColor: "#151923"
-  },
-  servingBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "#2ecc71"
-  },
-  servingBadgeText: {
-    color: "#d0d4dc",
-    fontSize: 11,
-    fontWeight: "600"
-  },
-  pressureBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    backgroundColor: "#151923"
-  },
-  pressureBadgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.2
-  },
-  pressureBadgeBreak: {
-    borderColor: "#2f80ed"
-  },
-  pressureBadgeSet: {
-    borderColor: "#7fb4ff"
-  },
-  pressureBadgeMatch: {
-    borderColor: "#ff8b8b"
-  },
-  serverDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999
-  },
-  serverDotActive: {
-    backgroundColor: "#2ecc71"
-  },
-  serverDotInactive: {
-    backgroundColor: "#2a2f3a"
-  },
-  setRow: {
-    flexDirection: "row",
-    gap: 8
-  },
-  setBox: {
-    minWidth: 28,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: "#151923",
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    alignItems: "center"
-  },
-  setBoxActive: {
-    borderColor: "#7fb4ff",
-    backgroundColor: "#1a2232"
-  },
-  setBoxText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700"
-  },
-  scoreRow: {
-    flexDirection: "row",
-    gap: 16
-  },
-  scoreColumn: {
-    flex: 1,
-    gap: 8
-  },
-  scoreLabel: {
-    color: "#9da5b4",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 1
-  },
-  scoreValueBox: {
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    alignItems: "center"
-  },
-  scoreValueChanged: {
-    shadowColor: "#7fb4ff",
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 3
-  },
-  gamesBox: {
-    backgroundColor: "#151923"
-  },
-  pointsBox: {
-    backgroundColor: "#111722"
-  },
-  gamesValue: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  pointsValue: {
-    color: "#cfe1ff",
-    fontSize: 22,
-    fontWeight: "600"
-  },
-  timelinePanel: {
-    borderRadius: 16,
-    backgroundColor: "#12151c",
-    borderWidth: 1,
-    borderColor: "#242a36",
-    overflow: "hidden"
-  },
-  timelineHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14
-  },
-  timelineTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  timelineHeaderMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8
-  },
-  timelineCount: {
-    color: "#9da5b4",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  timelineToggleText: {
-    color: "#9da5b4",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  timelineBody: {
-    borderTopWidth: 1,
-    borderTopColor: "#242a36",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12
-  },
-  timelineEmpty: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  timelineItem: {
-    flexDirection: "row",
-    gap: 10
-  },
-  timelineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    marginTop: 6,
-    backgroundColor: "#2f80ed"
-  },
-  timelineContent: {
-    flex: 1,
-    gap: 4
-  },
-  timelineLabel: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "500"
-  },
-  timelineTime: {
-    color: "#9da5b4",
-    fontSize: 12
-  },
-  secondaryActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end"
-  },
-  secondaryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2a2f3a"
-  },
-  secondaryButtonText: {
-    color: "#ff8b8b",
-    fontSize: 13,
-    fontWeight: "600"
-  },
-  actionBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "rgba(11, 11, 15, 0.95)",
-    borderTopWidth: 1,
-    borderTopColor: "#1d222d"
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  actionButtonPrimary: {
-    backgroundColor: "#2f80ed"
-  },
-  actionButtonSecondary: {
-    backgroundColor: "#1c1f26"
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-    textAlign: "center"
-  },
-  controllerPanel: {
-    borderRadius: 16,
-    backgroundColor: "#12151c",
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    overflow: "hidden"
-  },
-  controllerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12
-  },
-  controllerTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  controllerToggleText: {
-    color: "#9da5b4",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  controllerBody: {
-    borderTopWidth: 1,
-    borderTopColor: "#2a2f3a",
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 12,
-    gap: 10
-  },
-  controllerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  controllerLabel: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  controllerValue: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600"
-  },
-  controllerKey: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700"
-  },
-  controllerSectionTitle: {
-    marginTop: 6,
-    color: "#c7cbd4",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 1
-  },
-  controllerButton: {
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#2a2f3a",
-    alignItems: "center"
-  },
-  controllerButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13
-  },
-  controllerStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6
-  },
-  controllerStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999
-  },
-  controllerStatusDotOn: {
-    backgroundColor: "#2ecc71"
-  },
-  controllerStatusDotOff: {
-    backgroundColor: "#ff7675"
-  }
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background
+    },
+    scrollContent: {
+      padding: 24,
+      paddingBottom: 140,
+      gap: 18
+    },
+    header: {
+      marginBottom: 6,
+      gap: 6
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between"
+    },
+    settingsButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    settingsButtonText: {
+      fontSize: 15
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subTitle: {
+      marginTop: 6,
+      textAlign: "center",
+      color: colors.muted
+    },
+    label: {
+      fontSize: 14,
+      textTransform: "uppercase",
+      letterSpacing: 1.4,
+      color: colors.muted,
+      marginBottom: 6
+    },
+    value: {
+      fontSize: 22,
+      fontWeight: "600",
+      color: colors.text
+    },
+    statusCard: {
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    statusHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    statusLabel: {
+      color: colors.muted,
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 1
+    },
+    statusValue: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: "600",
+      marginTop: 10
+    },
+    servingLine: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 10
+    },
+    serverLine: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    servingDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 999,
+      backgroundColor: "#2ecc71"
+    },
+    resetScoreButton: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    resetScoreText: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: "600"
+    },
+    playerCard: {
+      borderRadius: 18,
+      padding: 18,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 16
+    },
+    playerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12
+    },
+    playerNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap"
+    },
+    playerName: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: "700"
+    },
+    servingBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt
+    },
+    servingBadgeDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 999,
+      backgroundColor: "#2ecc71"
+    },
+    servingBadgeText: {
+      color: colors.text,
+      fontSize: 11,
+      fontWeight: "600"
+    },
+    pressureBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt
+    },
+    pressureBadgeText: {
+      color: colors.text,
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.2
+    },
+    pressureBadgeBreak: {
+      borderColor: colors.accent
+    },
+    pressureBadgeSet: {
+      borderColor: "#7fb4ff"
+    },
+    pressureBadgeMatch: {
+      borderColor: "#ff8b8b"
+    },
+    serverDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 999
+    },
+    serverDotActive: {
+      backgroundColor: "#2ecc71"
+    },
+    serverDotInactive: {
+      backgroundColor: colors.border
+    },
+    setRow: {
+      flexDirection: "row",
+      gap: 8
+    },
+    setBox: {
+      minWidth: 28,
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center"
+    },
+    setBoxActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.surface
+    },
+    setBoxText: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: "700"
+    },
+    scoreRow: {
+      flexDirection: "row",
+      gap: 16
+    },
+    scoreColumn: {
+      flex: 1,
+      gap: 8
+    },
+    scoreLabel: {
+      color: colors.muted,
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 1
+    },
+    scoreValueBox: {
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center"
+    },
+    scoreValueChanged: {
+      shadowColor: colors.accent,
+      shadowOpacity: 0.35,
+      shadowRadius: 6,
+      elevation: 3
+    },
+    gamesBox: {
+      backgroundColor: colors.surfaceAlt
+    },
+    pointsBox: {
+      backgroundColor: colors.surface
+    },
+    gamesValue: {
+      color: colors.text,
+      fontSize: 28,
+      fontWeight: "700"
+    },
+    pointsValue: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: "600"
+    },
+    timelinePanel: {
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden"
+    },
+    timelineHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 14
+    },
+    timelineTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600"
+    },
+    timelineHeaderMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8
+    },
+    timelineCount: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "600"
+    },
+    timelineToggleText: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "600"
+    },
+    timelineBody: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 12
+    },
+    timelineEmpty: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    timelineItem: {
+      flexDirection: "row",
+      gap: 10
+    },
+    timelineDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 999,
+      marginTop: 6,
+      backgroundColor: colors.accent
+    },
+    timelineContent: {
+      flex: 1,
+      gap: 4
+    },
+    timelineLabel: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: "500"
+    },
+    timelineTime: {
+      color: colors.muted,
+      fontSize: 12
+    },
+    secondaryActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end"
+    },
+    secondaryButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    secondaryButtonText: {
+      color: "#ff8b8b",
+      fontSize: 13,
+      fontWeight: "600"
+    },
+    actionBar: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      flexDirection: "row",
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    actionButtonPrimary: {
+      backgroundColor: colors.accent
+    },
+    actionButtonSecondary: {
+      backgroundColor: colors.surfaceAlt
+    },
+    actionButtonText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "700",
+      textAlign: "center"
+    },
+    actionButtonTextLight: {
+      color: "#fff"
+    },
+    controllerPanel: {
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden"
+    },
+    controllerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 12
+    },
+    controllerTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600"
+    },
+    controllerToggleText: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "600"
+    },
+    controllerBody: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+      paddingTop: 12,
+      gap: 10
+    },
+    controllerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    controllerLabel: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    controllerValue: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: "600"
+    },
+    controllerKey: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: "700"
+    },
+    controllerSectionTitle: {
+      marginTop: 6,
+      color: colors.muted,
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 1
+    },
+    controllerButton: {
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center"
+    },
+    controllerButtonText: {
+      color: colors.text,
+      fontWeight: "600",
+      fontSize: 13
+    },
+    controllerStatus: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6
+    },
+    controllerStatusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 999
+    },
+    controllerStatusDotOn: {
+      backgroundColor: "#2ecc71"
+    },
+    controllerStatusDotOff: {
+      backgroundColor: "#ff7675"
+    }
+  });
