@@ -11,19 +11,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { initialState } from "../src/lib/tennis/engine";
-import { Player } from "../src/lib/tennis/types";
-import { getHistoryById } from "../src/lib/history/historyStorage";
-import { DEFAULT_PRESETS } from "../src/lib/presets/defaultPresets";
+import { initialState } from "../../src/lib/tennis/engine";
+import { Player } from "../../src/lib/tennis/types";
+import { getHistoryById } from "../../src/lib/history/historyStorage";
+import { DEFAULT_PRESETS } from "../../src/lib/presets/defaultPresets";
 import {
   clearCustomPresets,
   loadCustomPresets,
   saveCustomPresets
-} from "../src/lib/presets/presetStorage";
-import { MatchPreset } from "../src/lib/presets/types";
-import { MatchConfig, saveMatch } from "../src/lib/storage/matchStorage";
-import SettingsDrawer from "../src/components/SettingsDrawer";
-import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
+} from "../../src/lib/presets/presetStorage";
+import { MatchPreset } from "../../src/lib/presets/types";
+import { MatchConfig, saveMatch } from "../../src/lib/storage/matchStorage";
+import SettingsDrawer from "../../src/components/SettingsDrawer";
+import { ThemeColors, useSettings } from "../../src/components/SettingsProvider";
 
 const buildPresetSubtitle = (preset: MatchPreset): string => {
   if (preset.rules.superTiebreakOnly) {
@@ -145,49 +145,49 @@ export default function SetupMatch() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>New Match</Text>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => setSettingsOpen(true)}
-        >
-          <Text style={styles.settingsButtonText}>⚙️</Text>
-        </TouchableOpacity>
-      </View>
-
-      {selectedPreset ? (
-        <View style={styles.presetBadge}>
-          <Text style={styles.presetBadgeText}>
-            Preset: {selectedPreset.title}
-          </Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>New Match</Text>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setSettingsOpen(true)}
+          >
+            <Text style={styles.settingsButtonText}>⚙️</Text>
+          </TouchableOpacity>
         </View>
-      ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Player A Name</Text>
-        <TextInput
-          style={styles.input}
-          value={playerAName}
-          onChangeText={setPlayerAName}
-          placeholder="Player A"
-          placeholderTextColor={colors.muted}
-        />
-      </View>
+        {selectedPreset ? (
+          <View style={styles.presetBadge}>
+            <Text style={styles.presetBadgeText}>
+              Preset: {selectedPreset.title}
+            </Text>
+          </View>
+        ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Player B Name</Text>
-        <TextInput
-          style={styles.input}
-          value={playerBName}
-          onChangeText={setPlayerBName}
-          placeholder="Player B"
-          placeholderTextColor={colors.muted}
-        />
-      </View>
+        <View style={styles.section}>
+          <Text style={styles.label}>Player A Name</Text>
+          <TextInput
+            style={styles.input}
+            value={playerAName}
+            onChangeText={setPlayerAName}
+            placeholder="Player A"
+            placeholderTextColor={colors.muted}
+          />
+        </View>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Match Format</Text>
-        <View style={styles.toggleRow}>
+        <View style={styles.section}>
+          <Text style={styles.label}>Player B Name</Text>
+          <TextInput
+            style={styles.input}
+            value={playerBName}
+            onChangeText={setPlayerBName}
+            placeholder="Player B"
+            placeholderTextColor={colors.muted}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Match Format</Text>
+          <View style={styles.toggleRow}>
           <TouchableOpacity
             style={[
               styles.toggleButton,

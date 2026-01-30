@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -8,388 +7,419 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useRouter } from "expo-router";
+import SettingsDrawer from "../../src/components/SettingsDrawer";
+import { ThemeColors, useSettings } from "../../src/components/SettingsProvider";
+import { formatDate, formatDuration } from "../../src/lib/history/historyFormat";
+import {
+  clearHistory,
+  loadHistory,
+  MatchRecord
+} from "../../src/lib/history/historyStorage";
+import { DEFAULT_PRESETS } from "../../src/lib/presets/defaultPresets";
+import { loadCustomPresets } from "../../src/lib/presets/presetStorage";
+import { MatchPreset } from "../../src/lib/presets/types";
+import { loadMatch, StoredMatch } from "../../src/lib/storage/matchStorage";
 
-import { supabase } from "../../lib/supabase";
-import Scoreboard from "../../src/components/Scoreboard";
-
-type SportRating = {
-  sport: string;
-  level: number | null;
-  reliability: number | null;
-  source: string | null;
-  matches_competitive: number | null;
-  updated_at: string | null;
-};
-
-type StatsSummary = {
-  confirmedMatches: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-};
-
-const formatSportLabel = (sport: string) =>
-  sport
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const formatLevel = (level: number | null) =>
-  level === null || Number.isNaN(level) ? "—" : level.toFixed(1);
-
-const formatReliability = (reliability: number | null) =>
-  reliability === null || Number.isNaN(reliability)
-    ? "—"
-    : `${Math.round(reliability)}%`;
-
-const emptyStats: StatsSummary = {
-  confirmedMatches: 0,
-  wins: 0,
-  losses: 0,
-  winRate: 0
+const getOpponentName = (record: MatchRecord): string => {
+  if (record.winner === record.players.playerAName) {
+    return record.players.playerBName;
+  }
+  if (record.winner === record.players.playerBName) {
+    return record.players.playerAName;
+  }
+  return record.players.playerBName;
 };
 
 export default function HomeScreen() {
-  const [ratings, setRatings] = useState<SportRating[]>([]);
-  const [stats, setStats] = useState<StatsSummary>(emptyStats);
-  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { colors } = useSettings();
+  const [history, setHistory] = useState<MatchRecord[]>([]);
+  const [activeMatch, setActiveMatch] = useState<StoredMatch | null>(null);
+  const [presets, setPresets] = useState<MatchPreset[]>(DEFAULT_PRESETS);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const fetchRatings = useCallback(async () => {
-    setIsLoading(true);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      setIsLoading(false);
-      router.replace("/(auth)/sign-in");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("sport_ratings")
-      .select("sport, level, reliability, source, matches_competitive, updated_at")
-      .eq("user_id", userData.user.id)
-      .order("sport", { ascending: true });
-
-    if (error) {
-      Alert.alert("Unable to load ratings", error.message);
-      setRatings([]);
-    } else {
-      setRatings(data ?? []);
-    }
-
-    const { data: myPlayers, error: myPlayersError } = await supabase
-      .from("match_players")
-      .select("match_id, side")
-      .eq("user_id", userData.user.id);
-
-    if (myPlayersError) {
-      Alert.alert("Unable to load stats", myPlayersError.message);
-      setStats(emptyStats);
-      setIsLoading(false);
-      return;
-    }
-
-    const matchIds = Array.from(
-      new Set((myPlayers ?? []).map((row) => row.match_id))
-    );
-
-    if (matchIds.length === 0) {
-      setStats(emptyStats);
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: matchRows, error: matchesError } = await supabase
-      .from("matches")
-      .select("id, status, winner_side")
-      .in("id", matchIds)
-      .eq("status", "confirmed");
-
-    if (matchesError) {
-      Alert.alert("Unable to load stats", matchesError.message);
-      setStats(emptyStats);
-      setIsLoading(false);
-      return;
-    }
-
-    const mySideByMatchId = new Map<number, number>();
-    (myPlayers ?? []).forEach((row) => {
-      const side = Number(row.side);
-      if (side === 1 || side === 2) {
-        mySideByMatchId.set(row.match_id, side);
-      }
-    });
-
-    let wins = 0;
-    let losses = 0;
-    let confirmedMatches = 0;
-
-    (matchRows ?? []).forEach((match) => {
-      const mySide = mySideByMatchId.get(match.id);
-      if (!mySide || (match.winner_side !== 1 && match.winner_side !== 2)) {
-        return;
-      }
-      confirmedMatches += 1;
-      if (match.winner_side === mySide) {
-        wins += 1;
-      } else {
-        losses += 1;
-      }
-    });
-
-    const winRate = confirmedMatches
-      ? Math.round((wins / confirmedMatches) * 100)
-      : 0;
-
-    setStats({
-      confirmedMatches,
-      wins,
-      losses,
-      winRate
-    });
-
-    setIsLoading(false);
+  const refreshData = useCallback(() => {
+    setHistory(loadHistory());
+    setActiveMatch(loadMatch());
+    setPresets([...DEFAULT_PRESETS, ...loadCustomPresets()]);
   }, []);
 
-  useEffect(() => {
-    fetchRatings();
-  }, [fetchRatings]);
+  useFocusEffect(
+    useCallback(() => {
+      refreshData();
+    }, [refreshData])
+  );
+
+  const hasActiveMatch = Boolean(
+    activeMatch && !activeMatch.tennisState.matchWinner
+  );
+
+  const handleClearHistory = () => {
+    if (typeof window !== "undefined" && window.confirm) {
+      if (!window.confirm("Clear recent match history?")) {
+        return;
+      }
+    } else {
+      Alert.alert(
+        "Clear match history",
+        "Remove all stored recent matches?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Clear",
+            style: "destructive",
+            onPress: () => {
+              clearHistory();
+              setHistory([]);
+            }
+          }
+        ]
+      );
+      return;
+    }
+    clearHistory();
+    setHistory([]);
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Home</Text>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={fetchRatings}
-          disabled={isLoading}
-        >
-          <Text style={styles.refreshText}>
-            {isLoading ? "Refreshing..." : "Refresh"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/report-match")}
-        >
-          <Text style={styles.actionButtonText}>Report match</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButtonSecondary}
-          onPress={() => router.push("/(tabs)/pending")}
-        >
-          <Text style={styles.actionButtonSecondaryText}>
-            Pending confirmations
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButtonSecondary}
-          onPress={() => router.push("/(tabs)/history")}
-        >
-          <Text style={styles.actionButtonSecondaryText}>Match history</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButtonSecondary}
-          onPress={() => router.push("/controller-setup")}
-        >
-          <Text style={styles.actionButtonSecondaryText}>Controller Setup</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Scoreboard />
-
-      <View style={styles.statsCard}>
-        <Text style={styles.statsTitle}>Stats</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statsItem}>
-            <Text style={styles.statsValue}>{stats.confirmedMatches}</Text>
-            <Text style={styles.statsLabel}>Confirmed</Text>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.appTitle}>Rackt</Text>
+            <Text style={styles.tagline}>
+              Match tracking that feels tournament-ready.
+            </Text>
           </View>
-          <View style={styles.statsItem}>
-            <Text style={styles.statsValue}>{stats.wins}</Text>
-            <Text style={styles.statsLabel}>Wins</Text>
-          </View>
-          <View style={styles.statsItem}>
-            <Text style={styles.statsValue}>{stats.losses}</Text>
-            <Text style={styles.statsLabel}>Losses</Text>
-          </View>
-          <View style={styles.statsItem}>
-            <Text style={styles.statsValue}>{stats.winRate}%</Text>
-            <Text style={styles.statsLabel}>Win rate</Text>
-          </View>
-        </View>
-      </View>
-
-      {isLoading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" />
-          <Text style={styles.loadingText}>Loading your ratings...</Text>
-        </View>
-      ) : ratings.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.subtitle}>No sport ratings yet.</Text>
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.replace("/(onboarding)/sports-and-levels")}
+            style={styles.settingsButton}
+            onPress={() => setSettingsOpen(true)}
           >
-            <Text style={styles.primaryButtonText}>Set up my sports</Text>
+            <Text style={styles.settingsIcon}>⚙️</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.list}>
-          {ratings.map((rating) => (
-            <View key={rating.sport} style={styles.card}>
-              <Text style={styles.cardTitle}>{formatSportLabel(rating.sport)}</Text>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Level</Text>
-                <Text style={styles.detailValue}>
-                  {formatLevel(rating.level)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Reliability</Text>
-                <Text style={styles.detailValue}>
-                  {formatReliability(rating.reliability)}
-                </Text>
-              </View>
-            </View>
-          ))}
+
+        <TouchableOpacity
+          style={[styles.card, styles.primaryCard]}
+          onPress={() => router.push("/(tabs)/new")}
+        >
+          <Text style={styles.cardEyebrow}>Quick start</Text>
+          <Text style={styles.cardTitle}>Start a new match</Text>
+          <Text style={styles.cardBody}>
+            Set players, format, and jump straight to the scoreboard.
+          </Text>
+          <View style={styles.cardCta}>
+            <Text style={styles.cardCtaText}>New Match</Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Quick Presets</Text>
         </View>
-      )}
-    </ScrollView>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.presetRow}
+        >
+          {presets.map((preset) => (
+            <TouchableOpacity
+              key={preset.id}
+              style={styles.presetCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/new",
+                  params: { presetId: preset.id }
+                })
+              }
+            >
+              <Text style={styles.presetTitle}>{preset.title}</Text>
+              <Text style={styles.presetSubtitle}>{preset.subtitle}</Text>
+              <View style={styles.presetCta}>
+                <Text style={styles.presetCtaText}>Start preset</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {hasActiveMatch && activeMatch && (
+          <TouchableOpacity
+            style={[styles.card, styles.secondaryCard]}
+            onPress={() => router.push("/match")}
+          >
+            <Text style={styles.cardEyebrow}>Continue last match</Text>
+            <Text style={styles.cardTitle}>
+              {activeMatch.config.playerAName} vs{" "}
+              {activeMatch.config.playerBName}
+            </Text>
+            <Text style={styles.cardBody}>
+              Jump back into the live scoreboard and keep the momentum going.
+            </Text>
+            <View style={styles.cardCtaSecondary}>
+              <Text style={styles.cardCtaTextSecondary}>Continue Match</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Matches</Text>
+          {history.length > 0 && (
+            <TouchableOpacity onPress={handleClearHistory}>
+              <Text style={styles.clearButton}>Clear history</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {history.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No matches yet</Text>
+            <Text style={styles.emptyBody}>
+              Finish a match to see the recap appear here instantly.
+            </Text>
+          </View>
+        ) : (
+          history.slice(0, 10).map((record) => {
+            const opponent = getOpponentName(record);
+            const duration =
+              record.durationSeconds > 0
+                ? `• ${formatDuration(record.durationSeconds)}`
+                : "";
+            return (
+              <TouchableOpacity
+                key={record.id}
+                style={styles.historyCard}
+                onPress={() => router.push(`/history/${record.id}`)}
+              >
+                <View style={styles.historyRow}>
+                  <Text style={styles.historyWinner}>{record.winner}</Text>
+                  <Text style={styles.historyScore}>
+                    {record.finalScoreString}
+                  </Text>
+                </View>
+                <Text style={styles.historyLine}>
+                  {record.winner} def. {opponent}
+                </Text>
+                <Text style={styles.historyMeta}>
+                  {formatDate(record.createdAt)} {duration}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </ScrollView>
+
+      <SettingsDrawer
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    gap: 16
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  refreshButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#111"
-  },
-  refreshText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  actionRow: {
-    gap: 12
-  },
-  actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#111",
-    alignItems: "center"
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  actionButtonSecondary: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#f5f5f5",
-    alignItems: "center"
-  },
-  actionButtonSecondaryText: {
-    color: "#111",
-    fontWeight: "600"
-  },
-  statsCard: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
-    padding: 16,
-    gap: 12
-  },
-  statsTitle: {
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  statsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12
-  },
-  statsItem: {
-    flexGrow: 1,
-    minWidth: 120,
-    paddingVertical: 8
-  },
-  statsValue: {
-    fontSize: 20,
-    fontWeight: "700"
-  },
-  statsLabel: {
-    color: "#666"
-  },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 32
-  },
-  loadingText: {
-    color: "#666"
-  },
-  emptyState: {
-    alignItems: "center",
-    gap: 16,
-    paddingVertical: 32
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center"
-  },
-  primaryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: "#111"
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  list: {
-    gap: 16
-  },
-  card: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
-    padding: 16,
-    gap: 12
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between"
-  },
-  detailLabel: {
-    color: "#666"
-  },
-  detailValue: {
-    fontWeight: "600"
-  }
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background
+    },
+    container: {
+      padding: 24,
+      paddingBottom: 120,
+      gap: 20
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 16
+    },
+    appTitle: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: colors.text
+    },
+    tagline: {
+      color: colors.muted,
+      marginTop: 4,
+      maxWidth: 220
+    },
+    settingsButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    settingsIcon: {
+      fontSize: 16
+    },
+    card: {
+      padding: 20,
+      borderRadius: 20,
+      borderWidth: 1
+    },
+    primaryCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border
+    },
+    secondaryCard: {
+      backgroundColor: colors.surfaceAlt,
+      borderColor: colors.border
+    },
+    cardEyebrow: {
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1.4,
+      fontSize: 12
+    },
+    cardTitle: {
+      marginTop: 8,
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: "700"
+    },
+    cardBody: {
+      marginTop: 8,
+      color: colors.muted,
+      fontSize: 14,
+      lineHeight: 20
+    },
+    cardCta: {
+      marginTop: 16,
+      alignSelf: "flex-start",
+      backgroundColor: colors.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 999
+    },
+    cardCtaText: {
+      color: "#fff",
+      fontWeight: "700",
+      fontSize: 14
+    },
+    cardCtaSecondary: {
+      marginTop: 16,
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 8
+    },
+    cardCtaTextSecondary: {
+      color: colors.text,
+      fontWeight: "700",
+      fontSize: 14
+    },
+    presetRow: {
+      gap: 12,
+      paddingVertical: 4,
+      paddingRight: 8
+    },
+    presetCard: {
+      width: 220,
+      padding: 16,
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10
+    },
+    presetTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "700"
+    },
+    presetSubtitle: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 18
+    },
+    presetCta: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    presetCtaText: {
+      color: colors.text,
+      fontWeight: "600",
+      fontSize: 12
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 8
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text
+    },
+    clearButton: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    emptyState: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600"
+    },
+    emptyBody: {
+      marginTop: 6,
+      color: colors.muted,
+      fontSize: 13
+    },
+    historyCard: {
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6
+    },
+    historyRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    historyWinner: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "700"
+    },
+    historyScore: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700"
+    },
+    historyLine: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: "600"
+    },
+    historyMeta: {
+      color: colors.muted,
+      fontSize: 12
+    }
+  });

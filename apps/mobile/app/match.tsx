@@ -158,7 +158,7 @@ export default function MatchScreen() {
   useEffect(() => {
     const stored = loadMatch();
     if (!stored) {
-      router.replace("/");
+      router.replace("/(tabs)");
       return;
     }
     setConfig(stored.config);
@@ -302,7 +302,7 @@ export default function MatchScreen() {
 
   const handleReset = () => {
     clearMatch();
-    router.replace("/");
+    router.replace("/(tabs)");
   };
 
   const handleUndo = useCallback(() => {
