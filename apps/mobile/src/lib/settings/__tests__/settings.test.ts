@@ -46,7 +46,8 @@ describe("settings storage", () => {
     expect(loadSettings()).toEqual({
       theme: "dark",
       haptics: false,
-      sounds: false
+      sounds: false,
+      pushNotifications: true
     });
   });
 
@@ -59,15 +60,26 @@ describe("settings storage", () => {
     expect(loadSettings()).toEqual({
       theme: "system",
       haptics: true,
-      sounds: true
+      sounds: true,
+      pushNotifications: true
     });
   });
 
   it("persists normalized values", () => {
-    saveSettings({ theme: "light", haptics: false, sounds: true });
+    saveSettings({
+      theme: "light",
+      haptics: false,
+      sounds: true,
+      pushNotifications: true
+    });
 
     expect(globalThis.localStorage.getItem("rackt_settings")).toBe(
-      JSON.stringify({ theme: "light", haptics: false, sounds: true })
+      JSON.stringify({
+        theme: "light",
+        haptics: false,
+        sounds: true,
+        pushNotifications: true
+      })
     );
   });
 });
