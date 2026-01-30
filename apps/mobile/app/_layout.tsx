@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
 
+import PushNotificationManager from "../src/components/PushNotificationManager";
 import { SettingsProvider } from "../src/components/SettingsProvider";
 export default function RootLayout() {
   return (
     <SettingsProvider>
+      <PushNotificationManager />
       <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="match" />
