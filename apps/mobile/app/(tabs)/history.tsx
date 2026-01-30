@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -8,438 +7,242 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { router } from "expo-router";
-import type { User } from "@supabase/supabase-js";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useRouter } from "expo-router";
+import SettingsDrawer from "../../src/components/SettingsDrawer";
+import { ThemeColors, useSettings } from "../../src/components/SettingsProvider";
+import { formatDate, formatDuration } from "../../src/lib/history/historyFormat";
+import {
+  clearHistory,
+  loadHistory,
+  MatchRecord
+} from "../../src/lib/history/historyStorage";
 
-import { supabase } from "../../lib/supabase";
-
-type MatchRow = {
-  id: string;
-  sport: string;
-  format: string;
-  status: string | null;
-  played_at: string | null;
-  score_text: string | null;
-  winner_side: number | null;
-  reported_by: string | null;
-};
-
-type MatchPlayerRow = {
-  match_id: string;
-  user_id: string;
-  side: number;
-};
-
-type Profile = {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-};
-
-type FilterValue = "all" | "confirmed" | "pending" | "disputed";
-
-type FilterOption = {
-  label: string;
-  value: FilterValue;
-};
-
-const FILTERS: FilterOption[] = [
-  { label: "All", value: "all" },
-  { label: "Confirmed", value: "confirmed" },
-  { label: "Pending", value: "pending" },
-  { label: "Disputed", value: "disputed" }
-];
-
-const formatSportLabel = (sport: string) =>
-  sport
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const formatProfileName = (profile?: Profile) =>
-  profile?.full_name?.trim() || profile?.username?.trim() || "Unknown player";
-
-const formatDate = (value: string | null) => {
-  if (!value) {
-    return "Unknown date";
+const getOpponentName = (record: MatchRecord): string => {
+  if (record.winner === record.players.playerAName) {
+    return record.players.playerBName;
   }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf())
-    ? "Unknown date"
-    : parsed.toLocaleDateString();
-};
-
-const formatStatus = (status: string | null) => {
-  if (!status) {
-    return "Unknown";
+  if (record.winner === record.players.playerBName) {
+    return record.players.playerAName;
   }
-  return status.replace(/\b\w/g, (char) => char.toUpperCase());
+  return record.players.playerBName;
 };
 
-export default function MatchHistoryScreen() {
-  const [user, setUser] = useState<User | null>(null);
-  const [matches, setMatches] = useState<MatchRow[]>([]);
-  const [matchPlayers, setMatchPlayers] = useState<MatchPlayerRow[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [filter, setFilter] = useState<FilterValue>("all");
-  const [isLoading, setIsLoading] = useState(true);
+export default function HistoryScreen() {
+  const router = useRouter();
+  const { colors } = useSettings();
+  const [history, setHistory] = useState<MatchRecord[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const loadHistory = useCallback(async () => {
-    setIsLoading(true);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error || !data.user) {
-      setIsLoading(false);
-      router.replace("/(auth)/sign-in");
-      return;
-    }
-
-    setUser(data.user);
-
-    const { data: myPlayers, error: myPlayersError } = await supabase
-      .from("match_players")
-      .select("match_id, user_id, side")
-      .eq("user_id", data.user.id);
-
-    if (myPlayersError) {
-      Alert.alert("Match history", myPlayersError.message);
-      setMatches([]);
-      setMatchPlayers([]);
-      setProfiles([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const matchIds = Array.from(
-      new Set((myPlayers ?? []).map((row) => row.match_id))
-    );
-
-    if (matchIds.length === 0) {
-      setMatches([]);
-      setMatchPlayers([]);
-      setProfiles([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: matchRows, error: matchesError } = await supabase
-      .from("matches")
-      .select(
-        "id, sport, format, status, played_at, score_text, winner_side, reported_by"
-      )
-      .in("id", matchIds)
-      .order("played_at", { ascending: false });
-
-    if (matchesError) {
-      Alert.alert("Match history", matchesError.message);
-      setMatches([]);
-      setMatchPlayers([]);
-      setProfiles([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: playerRows, error: playersError } = await supabase
-      .from("match_players")
-      .select("match_id, user_id, side")
-      .in("match_id", matchIds);
-
-    if (playersError) {
-      Alert.alert("Match history", playersError.message);
-      setMatches([]);
-      setMatchPlayers([]);
-      setProfiles([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const userIds = Array.from(
-      new Set((playerRows ?? []).map((row) => row.user_id))
-    );
-
-    let profileRows: Profile[] = [];
-
-    if (userIds.length > 0) {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, username, full_name")
-        .in("id", userIds);
-
-      if (profileError) {
-        Alert.alert("Match history", profileError.message);
-        setMatches([]);
-        setMatchPlayers([]);
-        setProfiles([]);
-        setIsLoading(false);
-        return;
-      }
-
-      profileRows = profileData ?? [];
-    }
-
-    setMatches(matchRows ?? []);
-    setMatchPlayers(playerRows ?? []);
-    setProfiles(profileRows);
-    setIsLoading(false);
+  const refreshHistory = useCallback(() => {
+    setHistory(loadHistory());
   }, []);
 
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
-
-  const profileMap = useMemo(
-    () => new Map(profiles.map((profile) => [profile.id, profile])),
-    [profiles]
+  useFocusEffect(
+    useCallback(() => {
+      refreshHistory();
+    }, [refreshHistory])
   );
 
-  const playersByMatchId = useMemo(() => {
-    const map = new Map<string, MatchPlayerRow[]>();
-    matchPlayers.forEach((player) => {
-      const list = map.get(player.match_id) ?? [];
-      list.push(player);
-      map.set(player.match_id, list);
-    });
-    return map;
-  }, [matchPlayers]);
-
-  const mySideByMatchId = useMemo(() => {
-    const map = new Map<string, number>();
-    matchPlayers.forEach((player) => {
-      if (player.user_id === user?.id) {
-        map.set(player.match_id, player.side);
+  const handleClearHistory = () => {
+    if (typeof window !== "undefined" && window.confirm) {
+      if (!window.confirm("Clear recent match history?")) {
+        return;
       }
-    });
-    return map;
-  }, [matchPlayers, user?.id]);
-
-  const filteredMatches = useMemo(() => {
-    if (filter === "all") {
-      return matches;
+    } else {
+      Alert.alert("Clear match history", "Remove all stored matches?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: () => {
+            clearHistory();
+            setHistory([]);
+          }
+        }
+      ]);
+      return;
     }
-    return matches.filter((match) => match.status === filter);
-  }, [filter, matches]);
-
-  const getResultForMatch = (match: MatchRow) => {
-    if (match.status !== "confirmed") {
-      return "—";
-    }
-    const mySide = mySideByMatchId.get(match.id);
-    if (!mySide || match.winner_side === null) {
-      return "—";
-    }
-    return match.winner_side === mySide ? "W" : "L";
-  };
-
-  const getOpponentSummary = (match: MatchRow) => {
-    const players = playersByMatchId.get(match.id) ?? [];
-    const mySide = mySideByMatchId.get(match.id);
-
-    if (!mySide) {
-      return "Opponents: —";
-    }
-
-    const myTeam = players.filter((player) => player.side === mySide);
-    const opponents = players.filter((player) => player.side !== mySide);
-
-    if (match.format === "singles") {
-      const opponent = opponents[0];
-      return `Opponent: ${formatProfileName(
-        opponent ? profileMap.get(opponent.user_id) : undefined
-      )}`;
-    }
-
-    const partner = myTeam.find((player) => player.user_id !== user?.id);
-    const partnerName = formatProfileName(
-      partner ? profileMap.get(partner.user_id) : undefined
-    );
-    const opponentNames = opponents
-      .map((opponent) => formatProfileName(profileMap.get(opponent.user_id)))
-      .join(", ");
-
-    return `Partner: ${partnerName}\nOpponents: ${opponentNames || "—"}`;
+    clearHistory();
+    setHistory([]);
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Match history</Text>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={loadHistory}
-          disabled={isLoading}
-        >
-          <Text style={styles.refreshText}>
-            {isLoading ? "Refreshing..." : "Refresh"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.title}>History</Text>
+            <Text style={styles.subtitle}>Review past matches and rematches.</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setSettingsOpen(true)}
+          >
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.filterRow}>
-        {FILTERS.map((option) => {
-          const isActive = option.value === filter;
-          return (
-            <TouchableOpacity
-              key={option.value}
-              onPress={() => setFilter(option.value)}
-              style={isActive ? styles.filterButtonActive : styles.filterButton}
-            >
-              <Text
-                style={
-                  isActive ? styles.filterButtonTextActive : styles.filterButtonText
-                }
-              >
-                {option.label}
-              </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Matches</Text>
+          {history.length > 0 && (
+            <TouchableOpacity onPress={handleClearHistory}>
+              <Text style={styles.clearButton}>Clear history</Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
+          )}
+        </View>
 
-      {isLoading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" />
-          <Text style={styles.loadingText}>Loading your matches...</Text>
-        </View>
-      ) : filteredMatches.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.subtitle}>No matches found.</Text>
-        </View>
-      ) : (
-        <View style={styles.list}>
-          {filteredMatches.map((match) => (
-            <View key={match.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>
-                  {formatSportLabel(match.sport)} · {match.format}
+        {history.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No matches yet</Text>
+            <Text style={styles.emptyBody}>
+              Finish a match to see the recap appear here instantly.
+            </Text>
+          </View>
+        ) : (
+          history.map((record) => {
+            const opponent = getOpponentName(record);
+            const duration =
+              record.durationSeconds > 0
+                ? `• ${formatDuration(record.durationSeconds)}`
+                : "";
+            return (
+              <TouchableOpacity
+                key={record.id}
+                style={styles.historyCard}
+                onPress={() => router.push(`/history/${record.id}`)}
+              >
+                <View style={styles.historyRow}>
+                  <Text style={styles.historyWinner}>{record.winner}</Text>
+                  <Text style={styles.historyScore}>{record.finalScoreString}</Text>
+                </View>
+                <Text style={styles.historyLine}>
+                  {record.winner} def. {opponent}
                 </Text>
-                <Text style={styles.cardDate}>{formatDate(match.played_at)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Score</Text>
-                <Text style={styles.detailValue}>
-                  {match.score_text || "—"}
+                <Text style={styles.historyMeta}>
+                  {formatDate(record.createdAt)} {duration}
                 </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Status</Text>
-                <Text style={styles.detailValue}>{formatStatus(match.status)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Result</Text>
-                <Text style={styles.detailValue}>{getResultForMatch(match)}</Text>
-              </View>
-              <Text style={styles.opponentText}>{getOpponentSummary(match)}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </ScrollView>
+
+      <SettingsDrawer
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    gap: 16
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  refreshButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#111"
-  },
-  refreshText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  filterRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
-  },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#f0f0f0"
-  },
-  filterButtonActive: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#111"
-  },
-  filterButtonText: {
-    color: "#111",
-    fontWeight: "600"
-  },
-  filterButtonTextActive: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 32
-  },
-  loadingText: {
-    color: "#666"
-  },
-  emptyState: {
-    alignItems: "center",
-    gap: 16,
-    paddingVertical: 32
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center"
-  },
-  list: {
-    gap: 16
-  },
-  card: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
-    padding: 16,
-    gap: 10
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    flexShrink: 1
-  },
-  cardDate: {
-    color: "#666"
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between"
-  },
-  detailLabel: {
-    color: "#666"
-  },
-  detailValue: {
-    fontWeight: "600"
-  },
-  opponentText: {
-    color: "#333",
-    lineHeight: 20
-  }
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background
+    },
+    container: {
+      padding: 24,
+      paddingBottom: 120,
+      gap: 20
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 16
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subtitle: {
+      color: colors.muted,
+      marginTop: 4,
+      maxWidth: 240
+    },
+    settingsButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    settingsIcon: {
+      fontSize: 16
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 8
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text
+    },
+    clearButton: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    emptyState: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600"
+    },
+    emptyBody: {
+      marginTop: 6,
+      color: colors.muted,
+      fontSize: 13
+    },
+    historyCard: {
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6
+    },
+    historyRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    historyWinner: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "700"
+    },
+    historyScore: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700"
+    },
+    historyLine: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: "600"
+    },
+    historyMeta: {
+      color: colors.muted,
+      fontSize: 12
+    }
+  });

@@ -41,7 +41,7 @@ export default function SummaryScreen() {
   useEffect(() => {
     const stored = loadMatch();
     if (!stored) {
-      router.replace("/");
+      router.replace("/(tabs)");
       return;
     }
     if (!stored.tennisState.matchWinner) {
@@ -186,7 +186,7 @@ export default function SummaryScreen() {
 
   const handleNewMatch = () => {
     clearMatch();
-    router.replace("/");
+    router.replace("/(tabs)/new");
   };
 
   if (!match || !summary) {

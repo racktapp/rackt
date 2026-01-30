@@ -67,12 +67,12 @@ export default function HistoryDetailScreen() {
   useEffect(() => {
     const id = typeof params.id === "string" ? params.id : params.id?.[0];
     if (!id) {
-      router.replace("/");
+      router.replace("/(tabs)");
       return;
     }
     const found = getHistoryById(id);
     if (!found) {
-      router.replace("/");
+      router.replace("/(tabs)");
       return;
     }
     setRecord(found);
@@ -137,13 +137,13 @@ export default function HistoryDetailScreen() {
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionPrimary]}
-            onPress={() => router.push(`/new?rematchId=${record.id}`)}
+            onPress={() => router.push(`/(tabs)/new?rematchId=${record.id}`)}
           >
             <Text style={styles.actionText}>Start rematch</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionSecondary]}
-            onPress={() => router.replace("/")}
+            onPress={() => router.replace("/(tabs)")}
           >
             <Text style={styles.actionText}>Back to Home</Text>
           </TouchableOpacity>
