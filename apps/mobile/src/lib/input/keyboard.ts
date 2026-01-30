@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Platform } from "react-native";
 
 import { InputAction } from "./actions";
 
@@ -48,12 +49,17 @@ export const isEditableTarget = (target: EventTarget | null): boolean => {
   return contentEditable === "" || contentEditable === "true";
 };
 
+const canUseDOMEvents = (): boolean =>
+  Platform.OS === "web" &&
+  typeof window !== "undefined" &&
+  typeof window.addEventListener === "function";
+
 export const useKeyboardControls = ({
   enabled,
   onAction
 }: KeyboardControlsOptions): void => {
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!canUseDOMEvents()) {
       return;
     }
 
