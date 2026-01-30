@@ -81,6 +81,9 @@ export default function SummaryScreen() {
       tiebreakRule: match.config.tiebreakAt6All
         ? "TIEBREAK_AT_6_ALL"
         : "ADVANTAGE",
+      tiebreakTo: match.config.tiebreakTo,
+      superTiebreakOnly: match.config.superTiebreakOnly,
+      shortSetTo: match.config.shortSetTo,
       finalScoreString: summary.finalScoreString,
       winner: summary.winnerName,
       durationSeconds: summary.durationSeconds,

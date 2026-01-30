@@ -4,8 +4,11 @@ import { Player, TennisState } from "../tennis/types";
 export type MatchConfig = {
   playerAName: string;
   playerBName: string;
-  bestOf: 3 | 5;
+  bestOf: 1 | 3 | 5;
   tiebreakAt6All: boolean;
+  tiebreakTo: number;
+  superTiebreakOnly?: boolean;
+  shortSetTo?: number;
   startingServer: Player;
   startTime: number;
 };
@@ -45,7 +48,10 @@ export const loadMatch = (): StoredMatch | null => {
       ...parsed,
       config: {
         ...parsed.config,
-        startTime: parsed.config?.startTime ?? Date.now()
+        startTime: parsed.config?.startTime ?? Date.now(),
+        tiebreakTo: parsed.config?.tiebreakTo ?? 7,
+        superTiebreakOnly: parsed.config?.superTiebreakOnly ?? false,
+        shortSetTo: parsed.config?.shortSetTo
       },
       timeline: parsed.timeline ?? []
     };

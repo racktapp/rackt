@@ -9,6 +9,9 @@ import {
 const createState = (overrides: Partial<TennisState> = {}): TennisState => ({
   bestOf: 3,
   tiebreakAt6All: true,
+  tiebreakTo: 7,
+  superTiebreakOnly: false,
+  shortSetTo: undefined,
   sets: [{ gamesA: 0, gamesB: 0 }],
   currentSet: 0,
   gamePointsA: 0,

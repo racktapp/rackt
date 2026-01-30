@@ -42,12 +42,18 @@ describe("matchStorage", () => {
       playerBName: "Player B",
       bestOf: 3,
       tiebreakAt6All: true,
+      tiebreakTo: 7,
+      superTiebreakOnly: false,
+      shortSetTo: undefined,
       startingServer: "A",
       startTime: Date.now()
     };
     const tennisState = initialState({
       bestOf: config.bestOf,
       tiebreakAt6All: config.tiebreakAt6All,
+      tiebreakTo: config.tiebreakTo,
+      superTiebreakOnly: config.superTiebreakOnly,
+      shortSetTo: config.shortSetTo,
       startingServer: config.startingServer
     });
     saveMatch({ config, tennisState, history: [], timeline: [] });
@@ -65,6 +71,9 @@ describe("matchStorage", () => {
       playerBName: "Player B",
       bestOf: 3,
       tiebreakAt6All: true,
+      tiebreakTo: 7,
+      superTiebreakOnly: false,
+      shortSetTo: undefined,
       startingServer: "A",
       startTime: Date.now()
     };
