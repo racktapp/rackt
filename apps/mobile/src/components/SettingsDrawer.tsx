@@ -102,6 +102,25 @@ export default function SettingsDrawer({
             </View>
           </View>
 
+          <View style={styles.section}>
+            <View style={styles.toggleRow}>
+              <View>
+                <Text style={styles.sectionLabel}>Push notifications</Text>
+                <Text style={styles.sectionHint}>
+                  Friend requests and match confirmations
+                </Text>
+              </View>
+              <Switch
+                value={settings.pushNotifications}
+                onValueChange={(value) =>
+                  updateSettings({ pushNotifications: value })
+                }
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.surface}
+              />
+            </View>
+          </View>
+
           <View style={styles.footerRow}>
             <TouchableOpacity
               style={styles.resetButton}

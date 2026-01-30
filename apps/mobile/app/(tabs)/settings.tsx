@@ -5,16 +5,19 @@ import {
   Alert,
   Button,
   StyleSheet,
+  Switch,
   Text,
   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { supabase } from "../../lib/supabase";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 export default function SettingsScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const { settings, colors, updateSettings } = useSettings();
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -87,6 +90,26 @@ export default function SettingsScreen() {
           />
         )}
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Notifications</Text>
+        <View style={styles.toggleRow}>
+          <View>
+            <Text style={styles.toggleLabel}>Push notifications</Text>
+            <Text style={styles.toggleHint}>
+              Friend requests and match confirmations
+            </Text>
+          </View>
+          <Switch
+            value={settings.pushNotifications}
+            onValueChange={(value) =>
+              updateSettings({ pushNotifications: value })
+            }
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={colors.surface}
+          />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -112,5 +135,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#111827"
+  },
+  toggleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827"
+  },
+  toggleHint: {
+    fontSize: 12,
+    color: "#6b7280"
   }
 });

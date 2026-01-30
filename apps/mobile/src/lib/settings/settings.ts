@@ -4,12 +4,14 @@ export type Settings = {
   theme: ThemeSetting;
   haptics: boolean;
   sounds: boolean;
+  pushNotifications: boolean;
 };
 
 export const defaultSettings: Settings = {
   theme: "system",
   haptics: true,
-  sounds: false
+  sounds: false,
+  pushNotifications: true
 };
 
 const SETTINGS_KEY = "rackt_settings";
@@ -30,7 +32,11 @@ export const normalizeSettings = (value: Partial<Settings> | null): Settings => 
     sounds:
       typeof value.sounds === "boolean"
         ? value.sounds
-        : defaultSettings.sounds
+        : defaultSettings.sounds,
+    pushNotifications:
+      typeof value.pushNotifications === "boolean"
+        ? value.pushNotifications
+        : defaultSettings.pushNotifications
   };
 };
 
