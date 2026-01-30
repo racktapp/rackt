@@ -10,6 +10,9 @@ import {
   View
 } from "react-native";
 import { useRouter } from "expo-router";
+import MatchSummaryView from "../src/components/MatchSummaryView";
+import { formatDate, formatDuration } from "../src/lib/history/historyFormat";
+import { addToHistory } from "../src/lib/history/historyStorage";
 import {
   clearMatch,
   loadMatch,
@@ -17,26 +20,17 @@ import {
 } from "../src/lib/storage/matchStorage";
 import { buildMatchSummary } from "../src/lib/match/summary";
 
-const formatDuration = (durationSeconds: number): string => {
-  const hours = Math.floor(durationSeconds / 3600);
-  const minutes = Math.floor((durationSeconds % 3600) / 60);
-  const seconds = durationSeconds % 60;
+const LAST_SAVED_MATCH_ID_KEY = "rackt.history.lastSavedMatchId";
 
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
+const getStorage = (): Storage | null => {
+  if (typeof window === "undefined") {
+    return null;
   }
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
   }
-  return `${seconds}s`;
-};
-
-const formatDate = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
 };
 
 export default function SummaryScreen() {
@@ -66,6 +60,34 @@ export default function SummaryScreen() {
       timeline: match.timeline
     });
   }, [match]);
+
+  useEffect(() => {
+    if (!summary || !match) {
+      return;
+    }
+    const recordId = `${match.config.startTime}-${match.config.playerAName}-${match.config.playerBName}`;
+    const storage = getStorage();
+    if (storage?.getItem(LAST_SAVED_MATCH_ID_KEY) === recordId) {
+      return;
+    }
+    addToHistory({
+      id: recordId,
+      createdAt: summary.endedAt,
+      players: {
+        playerAName: match.config.playerAName,
+        playerBName: match.config.playerBName
+      },
+      bestOf: match.config.bestOf,
+      tiebreakRule: match.config.tiebreakAt6All
+        ? "TIEBREAK_AT_6_ALL"
+        : "ADVANTAGE",
+      finalScoreString: summary.finalScoreString,
+      winner: summary.winnerName,
+      durationSeconds: summary.durationSeconds,
+      sets: summary.setScores
+    });
+    storage?.setItem(LAST_SAVED_MATCH_ID_KEY, recordId);
+  }, [match, summary]);
 
   const loserName = useMemo(() => {
     if (!summary || !match) {
@@ -172,6 +194,7 @@ export default function SummaryScreen() {
   }
 
   const matchDate = formatDate(summary.endedAt);
+  const durationLabel = formatDuration(summary.durationSeconds);
 
   return (
     <View style={styles.container}>
@@ -184,79 +207,13 @@ export default function SummaryScreen() {
           <Text style={styles.subTitle}>{matchDate}</Text>
         </View>
 
-        <View style={styles.heroCard}>
-          <Text style={styles.heroWinner}>{summary.winnerName}</Text>
-          <Text style={styles.heroLine}>{summaryLine}</Text>
-          <Text style={styles.heroMeta}>
-            Duration {formatDuration(summary.durationSeconds)}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Set-by-set</Text>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableCell, styles.tableLabel]}>Set</Text>
-            <Text style={[styles.tableCell, styles.tableLabel]}>
-              {match.config.playerAName}
-            </Text>
-            <Text style={[styles.tableCell, styles.tableLabel]}>
-              {match.config.playerBName}
-            </Text>
-          </View>
-          {summary.setScores.map((set) => (
-            <View key={`set-${set.setNumber}`} style={styles.tableRow}>
-              <Text style={styles.tableCell}>#{set.setNumber}</Text>
-              <Text style={styles.tableCell}>{set.gamesA}</Text>
-              <Text style={styles.tableCell}>{set.gamesB}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Momentum</Text>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Games won</Text>
-            <Text style={styles.statValue}>
-              {summary.counts.gamesA} • {summary.counts.gamesB}
-            </Text>
-          </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Sets won</Text>
-            <Text style={styles.statValue}>
-              {summary.counts.setsA} • {summary.counts.setsB}
-            </Text>
-          </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Tiebreaks played</Text>
-            <Text style={styles.statValue}>{summary.counts.tiebreaksPlayed}</Text>
-          </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Points won</Text>
-            <Text style={styles.statValue}>
-              {summary.counts.pointsA ?? 0} • {summary.counts.pointsB ?? 0}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Result Card</Text>
-          <View style={styles.cardPreview}>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardPlayer}>{match.config.playerAName}</Text>
-              <Text style={styles.cardScore}>{summary.finalScoreString}</Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardPlayer}>{match.config.playerBName}</Text>
-              <Text style={styles.cardMeta}>{matchDate}</Text>
-            </View>
-            <View style={styles.cardFooter}>
-              <Text style={styles.cardFooterText}>Rackt</Text>
-            </View>
-          </View>
-          <Text style={styles.cardHint}>
-            Save or share the result card as a premium match recap.
-          </Text>
-        </View>
+        <MatchSummaryView
+          config={match.config}
+          summary={summary}
+          summaryLine={summaryLine}
+          matchDate={matchDate}
+          durationLabel={durationLabel}
+        />
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -316,120 +273,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1.4,
     color: "#9da5b4"
-  },
-  heroCard: {
-    padding: 18,
-    borderRadius: 18,
-    backgroundColor: "#12151c",
-    borderWidth: 1,
-    borderColor: "#242a36",
-    alignItems: "center",
-    gap: 8
-  },
-  heroWinner: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "700"
-  },
-  heroLine: {
-    color: "#cfe1ff",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center"
-  },
-  heroMeta: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  card: {
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#11141b",
-    borderWidth: 1,
-    borderColor: "#242a36",
-    gap: 12
-  },
-  cardTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  tableHeader: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#242a36",
-    paddingBottom: 8
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 6
-  },
-  tableCell: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 14
-  },
-  tableLabel: {
-    color: "#9da5b4",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    fontSize: 12
-  },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  statLabel: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  statValue: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600"
-  },
-  cardPreview: {
-    borderRadius: 18,
-    padding: 18,
-    backgroundColor: "#151923",
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    gap: 12
-  },
-  cardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  cardPlayer: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700"
-  },
-  cardScore: {
-    color: "#7fb4ff",
-    fontSize: 14,
-    fontWeight: "700"
-  },
-  cardMeta: {
-    color: "#9da5b4",
-    fontSize: 12
-  },
-  cardFooter: {
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#2a2f3a",
-    alignItems: "flex-end"
-  },
-  cardFooterText: {
-    color: "#9da5b4",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  cardHint: {
-    color: "#9da5b4",
-    fontSize: 12
   },
   actions: {
     gap: 12
