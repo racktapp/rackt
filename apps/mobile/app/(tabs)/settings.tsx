@@ -8,6 +8,7 @@ import {
   Text,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { supabase } from "../../lib/supabase";
 
@@ -58,7 +59,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Settings</Text>
       <Text style={styles.subtitle}>
         Manage your account preferences and authentication status.
@@ -86,7 +87,7 @@ export default function SettingsScreen() {
           />
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

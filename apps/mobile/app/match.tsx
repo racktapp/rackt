@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { reset } from "../src/lib/tennis/engine";
 import { Player, TennisState } from "../src/lib/tennis/types";
@@ -400,16 +401,16 @@ export default function MatchScreen() {
 
   if (!config || !state) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Text style={styles.label}>Loading match...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   const matchFinished = Boolean(state.matchWinner);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -730,7 +731,7 @@ export default function MatchScreen() {
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

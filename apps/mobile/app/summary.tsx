@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import MatchSummaryView from "../src/components/MatchSummaryView";
 import { formatDate, formatDuration } from "../src/lib/history/historyFormat";
@@ -190,9 +191,9 @@ export default function SummaryScreen() {
 
   if (!match || !summary) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Text style={styles.label}>Loading summary...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -200,7 +201,7 @@ export default function SummaryScreen() {
   const durationLabel = formatDuration(summary.durationSeconds);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -245,7 +246,7 @@ export default function SummaryScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

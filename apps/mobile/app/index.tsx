@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import SettingsDrawer from "../src/components/SettingsDrawer";
 import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
@@ -85,7 +86,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
@@ -217,7 +218,7 @@ export default function HomeScreen() {
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
