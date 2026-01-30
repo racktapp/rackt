@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MatchSummaryView from "../../src/components/MatchSummaryView";
 import { formatDate, formatDuration } from "../../src/lib/history/historyFormat";
@@ -101,9 +102,9 @@ export default function HistoryDetailScreen() {
 
   if (!record || !summary || !config) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Text style={styles.label}>Loading match details...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -115,7 +116,7 @@ export default function HistoryDetailScreen() {
   } ${record.finalScoreString}`;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -148,7 +149,7 @@ export default function HistoryDetailScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

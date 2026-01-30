@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { initialState } from "../src/lib/tennis/engine";
 import { Player } from "../src/lib/tennis/types";
@@ -139,7 +140,7 @@ export default function SetupMatch() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -476,7 +477,7 @@ export default function SetupMatch() {
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
