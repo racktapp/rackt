@@ -123,22 +123,6 @@ const pressureLabel: Record<PressureType, string> = {
   BREAK_POINT: "Break Point"
 };
 
-const PressureBadge = ({ indicator }: { indicator: PressureIndicator }) => {
-  const badgeStyle =
-    indicator.type === "MATCH_POINT"
-      ? styles.pressureBadgeMatch
-      : indicator.type === "SET_POINT"
-        ? styles.pressureBadgeSet
-        : styles.pressureBadgeBreak;
-  return (
-    <View style={[styles.pressureBadge, badgeStyle]}>
-      <Text style={styles.pressureBadgeText}>
-        {pressureLabel[indicator.type]}
-      </Text>
-    </View>
-  );
-};
-
 export default function MatchScreen() {
   const router = useRouter();
   const { settings, colors } = useSettings();
@@ -153,6 +137,22 @@ export default function MatchScreen() {
   const hasAutoNavigated = useRef(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const PressureBadge = ({ indicator }: { indicator: PressureIndicator }) => {
+    const badgeStyle =
+      indicator.type === "MATCH_POINT"
+        ? styles.pressureBadgeMatch
+        : indicator.type === "SET_POINT"
+          ? styles.pressureBadgeSet
+          : styles.pressureBadgeBreak;
+    return (
+      <View style={[styles.pressureBadge, badgeStyle]}>
+        <Text style={styles.pressureBadgeText}>
+          {pressureLabel[indicator.type]}
+        </Text>
+      </View>
+    );
+  };
 
   useEffect(() => {
     const stored = loadMatch();
