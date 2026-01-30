@@ -1,5 +1,6 @@
 import { MatchConfig } from "../storage/matchStorage";
 import { pointWonBy } from "../tennis/engine";
+import { getSetWinner } from "../tennis/rules";
 import { Player, TennisState } from "../tennis/types";
 
 export type PressureType = "MATCH_POINT" | "SET_POINT" | "BREAK_POINT";
@@ -11,22 +12,16 @@ export type PressureIndicator = {
 
 export const isTieBreak = (state: TennisState): boolean => state.isTiebreak;
 
-const isSetWin = (gamesA: number, gamesB: number): Player | undefined => {
-  if (gamesA >= 6 || gamesB >= 6) {
-    if (Math.abs(gamesA - gamesB) >= 2) {
-      return gamesA > gamesB ? "A" : "B";
-    }
-  }
-  if (gamesA === 7 || gamesB === 7) {
-    return gamesA > gamesB ? "A" : "B";
-  }
-  return undefined;
-};
-
-const countSetsWon = (sets: TennisState["sets"]) => {
+const countSetsWon = (
+  sets: TennisState["sets"],
+  config: MatchConfig
+) => {
   return sets.reduce(
     (acc, set) => {
-      const winner = isSetWin(set.gamesA, set.gamesB);
+      const winner = getSetWinner(set.gamesA, set.gamesB, {
+        tiebreakAt6All: config.tiebreakAt6All,
+        shortSetTo: config.shortSetTo
+      });
       if (winner === "A") {
         return { winsA: acc.winsA + 1, winsB: acc.winsB };
       }
@@ -57,11 +52,11 @@ export const nextPointWinsGame = (
 export const nextPointWinsSet = (
   state: TennisState,
   player: Player,
-  _config: MatchConfig
+  config: MatchConfig
 ): boolean => {
   const nextState = pointWonBy(state, player);
-  const prevWins = countSetsWon(state.sets);
-  const nextWins = countSetsWon(nextState.sets);
+  const prevWins = countSetsWon(state.sets, config);
+  const nextWins = countSetsWon(nextState.sets, config);
   return player === "A"
     ? nextWins.winsA > prevWins.winsA
     : nextWins.winsB > prevWins.winsB;
@@ -77,7 +72,7 @@ export const nextPointWinsMatch = (
     return true;
   }
   const neededSets = Math.ceil(config.bestOf / 2);
-  const nextWins = countSetsWon(nextState.sets);
+  const nextWins = countSetsWon(nextState.sets, config);
   return player === "A"
     ? nextWins.winsA >= neededSets
     : nextWins.winsB >= neededSets;

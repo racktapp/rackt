@@ -1,9 +1,13 @@
+import { getSetWinner, resolveTiebreakTo, shouldStartTiebreak } from "./rules";
 import { MatchOptions, Player, SetScore, TennisState } from "./types";
 
 const DEFAULT_OPTIONS: Required<MatchOptions> = {
   bestOf: 3,
   tiebreakAt6All: true,
-  startingServer: "A"
+  startingServer: "A",
+  tiebreakTo: 7,
+  superTiebreakOnly: false,
+  shortSetTo: undefined
 };
 
 const otherPlayer = (player: Player): Player => (player === "A" ? "B" : "A");
@@ -20,17 +24,15 @@ const isGameWin = (pointsA: number, pointsB: number): Player | undefined => {
   return undefined;
 };
 
-const isSetWin = (gamesA: number, gamesB: number): Player | undefined => {
-  if (gamesA >= 6 || gamesB >= 6) {
-    if (Math.abs(gamesA - gamesB) >= 2) {
-      return gamesA > gamesB ? "A" : "B";
-    }
-  }
-  if (gamesA === 7 || gamesB === 7) {
-    return gamesA > gamesB ? "A" : "B";
-  }
-  return undefined;
-};
+const isSetWin = (
+  gamesA: number,
+  gamesB: number,
+  state: Pick<TennisState, "tiebreakAt6All" | "shortSetTo">
+): Player | undefined =>
+  getSetWinner(gamesA, gamesB, {
+    tiebreakAt6All: state.tiebreakAt6All,
+    shortSetTo: state.shortSetTo
+  });
 
 const serverForPoint = (startServer: Player, pointNumber: number): Player => {
   if (pointNumber === 1) {
@@ -43,7 +45,10 @@ const serverForPoint = (startServer: Player, pointNumber: number): Player => {
 const countSetsWon = (sets: SetScore[]): { winsA: number; winsB: number } => {
   return sets.reduce(
     (acc, set) => {
-      const winner = isSetWin(set.gamesA, set.gamesB);
+      const winner = isSetWin(set.gamesA, set.gamesB, {
+        tiebreakAt6All: state.tiebreakAt6All,
+        shortSetTo: state.shortSetTo
+      });
       if (winner === "A") {
         return { winsA: acc.winsA + 1, winsB: acc.winsB };
       }
@@ -59,16 +64,21 @@ const countSetsWon = (sets: SetScore[]): { winsA: number; winsB: number } => {
 export const initialState = (options: MatchOptions = {}): TennisState => {
   const resolved = { ...DEFAULT_OPTIONS, ...options };
   const startingServer = resolved.startingServer ?? "A";
+  const superTiebreakOnly = resolved.superTiebreakOnly ?? false;
   return {
     bestOf: resolved.bestOf,
     tiebreakAt6All: resolved.tiebreakAt6All,
+    tiebreakTo: resolveTiebreakTo(resolved.tiebreakTo),
+    superTiebreakOnly,
+    shortSetTo: resolved.shortSetTo,
     sets: [{ gamesA: 0, gamesB: 0 }],
     currentSet: 0,
     gamePointsA: 0,
     gamePointsB: 0,
-    isTiebreak: false,
+    isTiebreak: superTiebreakOnly,
     tiebreakPointsA: 0,
     tiebreakPointsB: 0,
+    tiebreakStartServer: superTiebreakOnly ? startingServer : undefined,
     server: startingServer
   };
 };
@@ -119,7 +129,7 @@ const awardGame = (state: TennisState, winner: Player): TennisState => {
     set.gamesB += 1;
   }
 
-  const setWinner = isSetWin(set.gamesA, set.gamesB);
+  const setWinner = isSetWin(set.gamesA, set.gamesB, next);
   if (setWinner) {
     const updated = finalizeMatchIfNeeded(next);
     if (updated.matchWinner) {
@@ -128,7 +138,7 @@ const awardGame = (state: TennisState, winner: Player): TennisState => {
     return startNextSet(updated);
   }
 
-  if (next.tiebreakAt6All && set.gamesA === 6 && set.gamesB === 6) {
+  if (shouldStartTiebreak(set.gamesA, set.gamesB, next)) {
     return {
       ...next,
       isTiebreak: true,
@@ -161,7 +171,7 @@ const finishTiebreak = (state: TennisState, winner: Player): TennisState => {
     set.gamesB += 1;
   }
 
-  const setWinner = isSetWin(set.gamesA, set.gamesB);
+  const setWinner = isSetWin(set.gamesA, set.gamesB, next);
   if (setWinner) {
     const updated = finalizeMatchIfNeeded(next);
     if (updated.matchWinner) {
@@ -188,8 +198,9 @@ export const pointWonBy = (
     } else {
       next.tiebreakPointsB += 1;
     }
+    const target = resolveTiebreakTo(next.tiebreakTo);
     const tiebreakWinner =
-      next.tiebreakPointsA >= 7 || next.tiebreakPointsB >= 7
+      next.tiebreakPointsA >= target || next.tiebreakPointsB >= target
         ? Math.abs(next.tiebreakPointsA - next.tiebreakPointsB) >= 2
           ? next.tiebreakPointsA > next.tiebreakPointsB
             ? "A"
@@ -198,6 +209,9 @@ export const pointWonBy = (
         : undefined;
 
     if (tiebreakWinner) {
+      if (next.superTiebreakOnly) {
+        return { ...next, matchWinner: tiebreakWinner };
+      }
       return finishTiebreak(next, tiebreakWinner);
     }
 

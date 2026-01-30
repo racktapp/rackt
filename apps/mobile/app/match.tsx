@@ -203,13 +203,30 @@ export default function MatchScreen() {
       }`;
     }
     if (state.isTiebreak) {
-      return `Tie-break • ${state.tiebreakPointsA}–${state.tiebreakPointsB}`;
+      const label = config.superTiebreakOnly ? "Match tie-break" : "Tie-break";
+      return `${label} • ${state.tiebreakPointsA}–${state.tiebreakPointsB}`;
     }
     const setScore = `${currentSet.gamesA}–${currentSet.gamesB}`;
     return `Set ${state.currentSet + 1} • ${setScore} • ${gameScoreLabel(
       state
     )}`;
   }, [config, currentSet, state]);
+
+  const rulesLabel = useMemo(() => {
+    if (!config) {
+      return "";
+    }
+    if (config.superTiebreakOnly) {
+      return `Match tie-break to ${config.tiebreakTo}`;
+    }
+    const setLabel = config.shortSetTo
+      ? `First to ${config.shortSetTo} games`
+      : `Best of ${config.bestOf}`;
+    const tiebreakLabel = config.tiebreakAt6All
+      ? `TB to ${config.tiebreakTo}`
+      : "No TB";
+    return `${setLabel} • ${tiebreakLabel}`;
+  }, [config]);
 
   const pressure = useMemo(
     () => (state && config ? getPressure(state, config) : null),
@@ -254,6 +271,9 @@ export default function MatchScreen() {
       reset({
         bestOf: config.bestOf,
         tiebreakAt6All: config.tiebreakAt6All,
+        tiebreakTo: config.tiebreakTo,
+        superTiebreakOnly: config.superTiebreakOnly,
+        shortSetTo: config.shortSetTo,
         startingServer: config.startingServer
       })
     );
@@ -404,10 +424,7 @@ export default function MatchScreen() {
               <Text style={styles.settingsButtonText}>⚙️</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.subTitle}>
-            Best of {config.bestOf} • Tie-break{" "}
-            {config.tiebreakAt6All ? "On" : "Off"}
-          </Text>
+          <Text style={styles.subTitle}>{rulesLabel}</Text>
         </View>
 
         <View style={styles.statusCard}>

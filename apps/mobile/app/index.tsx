@@ -16,6 +16,9 @@ import {
   loadHistory,
   MatchRecord
 } from "../src/lib/history/historyStorage";
+import { DEFAULT_PRESETS } from "../src/lib/presets/defaultPresets";
+import { loadCustomPresets } from "../src/lib/presets/presetStorage";
+import { MatchPreset } from "../src/lib/presets/types";
 import { loadMatch, StoredMatch } from "../src/lib/storage/matchStorage";
 
 const getOpponentName = (record: MatchRecord): string => {
@@ -33,6 +36,7 @@ export default function HomeScreen() {
   const { colors } = useSettings();
   const [history, setHistory] = useState<MatchRecord[]>([]);
   const [activeMatch, setActiveMatch] = useState<StoredMatch | null>(null);
+  const [presets, setPresets] = useState<MatchPreset[]>(DEFAULT_PRESETS);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -40,6 +44,7 @@ export default function HomeScreen() {
   const refreshData = useCallback(() => {
     setHistory(loadHistory());
     setActiveMatch(loadMatch());
+    setPresets([...DEFAULT_PRESETS, ...loadCustomPresets()]);
   }, []);
 
   useFocusEffect(
@@ -113,6 +118,34 @@ export default function HomeScreen() {
             <Text style={styles.cardCtaText}>New Match</Text>
           </View>
         </TouchableOpacity>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Quick Presets</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.presetRow}
+        >
+          {presets.map((preset) => (
+            <TouchableOpacity
+              key={preset.id}
+              style={styles.presetCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/new",
+                  params: { presetId: preset.id }
+                })
+              }
+            >
+              <Text style={styles.presetTitle}>{preset.title}</Text>
+              <Text style={styles.presetSubtitle}>{preset.subtitle}</Text>
+              <View style={styles.presetCta}>
+                <Text style={styles.presetCtaText}>Start preset</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {hasActiveMatch && activeMatch && (
           <TouchableOpacity
@@ -285,6 +318,44 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text,
       fontWeight: "700",
       fontSize: 14
+    },
+    presetRow: {
+      gap: 12,
+      paddingVertical: 4,
+      paddingRight: 8
+    },
+    presetCard: {
+      width: 220,
+      padding: 16,
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10
+    },
+    presetTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "700"
+    },
+    presetSubtitle: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 18
+    },
+    presetCta: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    presetCtaText: {
+      color: colors.text,
+      fontWeight: "600",
+      fontSize: 12
     },
     sectionHeader: {
       flexDirection: "row",

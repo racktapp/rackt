@@ -121,4 +121,24 @@ describe("tennis engine", () => {
     state = winPoint(state, "B"); // point 5
     expect(state.server).toBe("B");
   });
+
+  it("plays a super tie-break match to 10 win-by-2", () => {
+    let state = initialState({
+      bestOf: 1,
+      tiebreakTo: 10,
+      superTiebreakOnly: true
+    });
+
+    for (let i = 0; i < 9; i += 1) {
+      state = winPoint(state, "A");
+      state = winPoint(state, "B");
+    }
+
+    state = winPoint(state, "A");
+    state = winPoint(state, "A");
+
+    expect(state.matchWinner).toBe("A");
+    expect(state.tiebreakPointsA).toBe(11);
+    expect(state.tiebreakPointsB).toBe(9);
+  });
 });

@@ -1,4 +1,5 @@
 import { MatchConfig } from "../storage/matchStorage";
+import { getSetWinner, resolveSetGamesTo } from "../tennis/rules";
 import { Player, SetScore, TennisState } from "../tennis/types";
 import { TimelineEvent } from "./timeline";
 
@@ -28,22 +29,16 @@ export type MatchSummary = {
   counts: MatchSummaryCounts;
 };
 
-const isSetWin = (gamesA: number, gamesB: number): Player | undefined => {
-  if (gamesA >= 6 || gamesB >= 6) {
-    if (Math.abs(gamesA - gamesB) >= 2) {
-      return gamesA > gamesB ? "A" : "B";
-    }
-  }
-  if (gamesA === 7 || gamesB === 7) {
-    return gamesA > gamesB ? "A" : "B";
-  }
-  return undefined;
-};
-
-const countSetsWon = (sets: SetScore[]): { winsA: number; winsB: number } => {
+const countSetsWon = (
+  sets: SetScore[],
+  config: MatchConfig
+): { winsA: number; winsB: number } => {
   return sets.reduce(
     (acc, set) => {
-      const winner = isSetWin(set.gamesA, set.gamesB);
+      const winner = getSetWinner(set.gamesA, set.gamesB, {
+        tiebreakAt6All: config.tiebreakAt6All,
+        shortSetTo: config.shortSetTo
+      });
       if (winner === "A") {
         return { winsA: acc.winsA + 1, winsB: acc.winsB };
       }
@@ -87,18 +82,34 @@ export const buildMatchSummary = ({
   );
 
   const relevantSets = finalState.sets.slice(0, finalState.currentSet + 1);
-  const setScores = relevantSets.map((set, index) => ({
-    setNumber: index + 1,
-    gamesA: set.gamesA,
-    gamesB: set.gamesB
-  }));
+  const isSuperTiebreak = Boolean(config.superTiebreakOnly);
+  const setScores = isSuperTiebreak
+    ? [
+        {
+          setNumber: 1,
+          gamesA: finalState.tiebreakPointsA,
+          gamesB: finalState.tiebreakPointsB
+        }
+      ]
+    : relevantSets.map((set, index) => ({
+        setNumber: index + 1,
+        gamesA: set.gamesA,
+        gamesB: set.gamesB
+      }));
 
   const finalScoreString = setScores
     .map((set) => formatScore(set.gamesA, set.gamesB))
     .join(", ");
 
-  const { winsA, winsB } = countSetsWon(relevantSets);
-  const winnerId = finalState.matchWinner ?? (winsA > winsB ? "A" : winsB > winsA ? "B" : null);
+  const { winsA, winsB } = isSuperTiebreak
+    ? {
+        winsA: finalState.matchWinner === "A" ? 1 : 0,
+        winsB: finalState.matchWinner === "B" ? 1 : 0
+      }
+    : countSetsWon(relevantSets, config);
+  const winnerId =
+    finalState.matchWinner ??
+    (winsA > winsB ? "A" : winsB > winsA ? "B" : null);
   const winnerName =
     winnerId === "A"
       ? config.playerAName
@@ -106,12 +117,20 @@ export const buildMatchSummary = ({
         ? config.playerBName
         : "";
 
-  const { gamesA, gamesB } = sumGames(relevantSets);
-  const tiebreaksPlayed = relevantSets.filter(
-    (set) =>
-      (set.gamesA === 7 && set.gamesB === 6) ||
-      (set.gamesA === 6 && set.gamesB === 7)
-  ).length;
+  const { gamesA, gamesB } = isSuperTiebreak
+    ? {
+        gamesA: finalState.tiebreakPointsA,
+        gamesB: finalState.tiebreakPointsB
+      }
+    : sumGames(relevantSets);
+  const tiebreakGamesTo = resolveSetGamesTo(config.shortSetTo) + 1;
+  const tiebreaksPlayed = isSuperTiebreak
+    ? 1
+    : relevantSets.filter(
+        (set) =>
+          (set.gamesA === tiebreakGamesTo && set.gamesB === tiebreakGamesTo - 1) ||
+          (set.gamesA === tiebreakGamesTo - 1 && set.gamesB === tiebreakGamesTo)
+      ).length;
 
   const pointsA = timeline.filter(
     (event) => event.type === "POINT" && event.player === "A"
