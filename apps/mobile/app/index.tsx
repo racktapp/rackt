@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   StyleSheet,
   Switch,
@@ -14,14 +14,20 @@ import {
   MatchConfig,
   saveMatch
 } from "../src/lib/storage/matchStorage";
+import SettingsDrawer from "../src/components/SettingsDrawer";
+import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
 
 export default function SetupMatch() {
   const router = useRouter();
+  const { colors } = useSettings();
   const [playerAName, setPlayerAName] = useState("Player A");
   const [playerBName, setPlayerBName] = useState("Player B");
   const [bestOf, setBestOf] = useState<3 | 5>(3);
   const [tiebreakAt6All, setTiebreakAt6All] = useState(true);
   const [startingServer, setStartingServer] = useState<Player>("A");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleStartMatch = () => {
     const config: MatchConfig = {
@@ -43,7 +49,15 @@ export default function SetupMatch() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Match Setup</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Match Setup</Text>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setSettingsOpen(true)}
+        >
+          <Text style={styles.settingsButtonText}>⚙️</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.label}>Player A Name</Text>
@@ -52,7 +66,7 @@ export default function SetupMatch() {
           value={playerAName}
           onChangeText={setPlayerAName}
           placeholder="Player A"
-          placeholderTextColor="#7c8494"
+          placeholderTextColor={colors.muted}
         />
       </View>
 
@@ -63,7 +77,7 @@ export default function SetupMatch() {
           value={playerBName}
           onChangeText={setPlayerBName}
           placeholder="Player B"
-          placeholderTextColor="#7c8494"
+          placeholderTextColor={colors.muted}
         />
       </View>
 
@@ -111,8 +125,8 @@ export default function SetupMatch() {
           <Switch
             value={tiebreakAt6All}
             onValueChange={setTiebreakAt6All}
-            trackColor={{ false: "#3b3f4a", true: "#2f80ed" }}
-            thumbColor="#f5f5f5"
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={colors.surface}
           />
         </View>
       </View>
@@ -155,85 +169,110 @@ export default function SetupMatch() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.startButton}
-        onPress={handleStartMatch}
-      >
+      <TouchableOpacity style={styles.startButton} onPress={handleStartMatch}>
         <Text style={styles.startButtonText}>Start Match</Text>
       </TouchableOpacity>
+
+      <SettingsDrawer
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#0b0b0f"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 24
-  },
-  section: {
-    marginBottom: 18
-  },
-  label: {
-    fontSize: 14,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    color: "#9da5b4",
-    marginBottom: 8
-  },
-  input: {
-    backgroundColor: "#1c1f26",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#fff"
-  },
-  toggleRow: {
-    flexDirection: "row",
-    gap: 12
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#1c1f26",
-    alignItems: "center"
-  },
-  toggleButtonActive: {
-    backgroundColor: "#2f80ed"
-  },
-  toggleText: {
-    color: "#c7ccd8",
-    fontSize: 15,
-    fontWeight: "600"
-  },
-  toggleTextActive: {
-    color: "#fff"
-  },
-  switchRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  startButton: {
-    marginTop: 16,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: "#2f80ed",
-    alignItems: "center"
-  },
-  startButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700"
-  }
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 24,
+      justifyContent: "center",
+      backgroundColor: colors.background
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 24
+    },
+    settingsButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    settingsButtonText: {
+      fontSize: 16
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    section: {
+      marginBottom: 18
+    },
+    label: {
+      fontSize: 14,
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+      color: colors.muted,
+      marginBottom: 8
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    toggleRow: {
+      flexDirection: "row",
+      gap: 12
+    },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    toggleButtonActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent
+    },
+    toggleText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "600"
+    },
+    toggleTextActive: {
+      color: "#fff"
+    },
+    switchRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    startButton: {
+      marginTop: 16,
+      paddingVertical: 16,
+      borderRadius: 14,
+      backgroundColor: colors.accent,
+      alignItems: "center"
+    },
+    startButtonText: {
+      color: "#fff",
+      fontSize: 18,
+      fontWeight: "700"
+    }
+  });
