@@ -50,10 +50,9 @@ describe("historyStorage", () => {
   beforeEach(() => {
     const storage = createMemoryStorage();
     globalThis.localStorage = storage;
-    (globalThis as typeof globalThis & { window?: Window }).window =
-      {
-        localStorage: storage
-      } as Window;
+    (globalThis as { window?: Window }).window = {
+      localStorage: storage
+    } as Window;
   });
 
   it("returns empty array when history is empty", () => {
