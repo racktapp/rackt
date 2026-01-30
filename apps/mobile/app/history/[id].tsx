@@ -1,0 +1,192 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import MatchSummaryView from "../../src/components/MatchSummaryView";
+import { formatDate, formatDuration } from "../../src/lib/history/historyFormat";
+import {
+  getHistoryById,
+  MatchRecord
+} from "../../src/lib/history/historyStorage";
+import { MatchSummary } from "../../src/lib/match/summary";
+import { MatchConfig } from "../../src/lib/storage/matchStorage";
+
+const buildSummaryFromRecord = (record: MatchRecord): MatchSummary => {
+  const gamesA = record.sets.reduce((acc, set) => acc + set.gamesA, 0);
+  const gamesB = record.sets.reduce((acc, set) => acc + set.gamesB, 0);
+  const setsA = record.sets.filter((set) => set.gamesA > set.gamesB).length;
+  const setsB = record.sets.filter((set) => set.gamesB > set.gamesA).length;
+  const tiebreaksPlayed = record.sets.filter(
+    (set) =>
+      (set.gamesA === 7 && set.gamesB === 6) ||
+      (set.gamesA === 6 && set.gamesB === 7)
+  ).length;
+
+  const winnerId =
+    record.winner === record.players.playerAName
+      ? "A"
+      : record.winner === record.players.playerBName
+        ? "B"
+        : null;
+
+  return {
+    winnerId,
+    winnerName: record.winner,
+    setScores: record.sets,
+    finalScoreString: record.finalScoreString,
+    durationSeconds: record.durationSeconds,
+    endedAt: record.createdAt,
+    counts: {
+      gamesA,
+      gamesB,
+      setsA,
+      setsB,
+      tiebreaksPlayed
+    }
+  };
+};
+
+export default function HistoryDetailScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const [record, setRecord] = useState<MatchRecord | null>(null);
+
+  useEffect(() => {
+    const id = typeof params.id === "string" ? params.id : params.id?.[0];
+    if (!id) {
+      router.replace("/");
+      return;
+    }
+    const found = getHistoryById(id);
+    if (!found) {
+      router.replace("/");
+      return;
+    }
+    setRecord(found);
+  }, [params.id, router]);
+
+  const summary = useMemo(
+    () => (record ? buildSummaryFromRecord(record) : null),
+    [record]
+  );
+
+  const config = useMemo<MatchConfig | null>(() => {
+    if (!record) {
+      return null;
+    }
+    return {
+      playerAName: record.players.playerAName,
+      playerBName: record.players.playerBName,
+      bestOf: record.bestOf,
+      tiebreakAt6All: record.tiebreakRule === "TIEBREAK_AT_6_ALL",
+      startingServer: "A",
+      startTime: record.createdAt
+    };
+  }, [record]);
+
+  if (!record || !summary || !config) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>Loading match details...</Text>
+      </View>
+    );
+  }
+
+  const matchDate = formatDate(record.createdAt);
+  const summaryLine = `${record.winner} def. ${
+    record.winner === record.players.playerAName
+      ? record.players.playerBName
+      : record.players.playerAName
+  } ${record.finalScoreString}`;
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Match Details</Text>
+          <Text style={styles.subTitle}>{matchDate}</Text>
+        </View>
+
+        <MatchSummaryView
+          config={config}
+          summary={summary}
+          summaryLine={summaryLine}
+          matchDate={matchDate}
+          durationLabel={formatDuration(record.durationSeconds)}
+        />
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionPrimary]}
+            onPress={() => router.push(`/new?rematchId=${record.id}`)}
+          >
+            <Text style={styles.actionText}>Start rematch</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionSecondary]}
+            onPress={() => router.replace("/")}
+          >
+            <Text style={styles.actionText}>Back to Home</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0b0b0f"
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 120,
+    gap: 18
+  },
+  header: {
+    alignItems: "center",
+    gap: 6
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#fff"
+  },
+  subTitle: {
+    color: "#9da5b4"
+  },
+  label: {
+    fontSize: 14,
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    color: "#9da5b4"
+  },
+  actions: {
+    gap: 12
+  },
+  actionButton: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center"
+  },
+  actionPrimary: {
+    backgroundColor: "#2f80ed"
+  },
+  actionSecondary: {
+    backgroundColor: "#1c1f26"
+  },
+  actionText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700"
+  }
+});

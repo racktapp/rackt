@@ -1,177 +1,184 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
+  ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
-import { useRouter } from "expo-router";
-import { initialState } from "../src/lib/tennis/engine";
-import { Player } from "../src/lib/tennis/types";
-import {
-  MatchConfig,
-  saveMatch
-} from "../src/lib/storage/matchStorage";
+import { useFocusEffect, useRouter } from "expo-router";
 import SettingsDrawer from "../src/components/SettingsDrawer";
 import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
+import { formatDate, formatDuration } from "../src/lib/history/historyFormat";
+import {
+  clearHistory,
+  loadHistory,
+  MatchRecord
+} from "../src/lib/history/historyStorage";
+import { loadMatch, StoredMatch } from "../src/lib/storage/matchStorage";
 
-export default function SetupMatch() {
+const getOpponentName = (record: MatchRecord): string => {
+  if (record.winner === record.players.playerAName) {
+    return record.players.playerBName;
+  }
+  if (record.winner === record.players.playerBName) {
+    return record.players.playerAName;
+  }
+  return record.players.playerBName;
+};
+
+export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useSettings();
-  const [playerAName, setPlayerAName] = useState("Player A");
-  const [playerBName, setPlayerBName] = useState("Player B");
-  const [bestOf, setBestOf] = useState<3 | 5>(3);
-  const [tiebreakAt6All, setTiebreakAt6All] = useState(true);
-  const [startingServer, setStartingServer] = useState<Player>("A");
+  const [history, setHistory] = useState<MatchRecord[]>([]);
+  const [activeMatch, setActiveMatch] = useState<StoredMatch | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const handleStartMatch = () => {
-    const config: MatchConfig = {
-      playerAName: playerAName.trim() || "Player A",
-      playerBName: playerBName.trim() || "Player B",
-      bestOf,
-      tiebreakAt6All,
-      startingServer,
-      startTime: Date.now()
-    };
-    const tennisState = initialState({
-      bestOf: config.bestOf,
-      tiebreakAt6All: config.tiebreakAt6All,
-      startingServer: config.startingServer
-    });
-    saveMatch({ config, tennisState, history: [], timeline: [] });
-    router.push("/match");
+  const refreshData = useCallback(() => {
+    setHistory(loadHistory());
+    setActiveMatch(loadMatch());
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshData();
+    }, [refreshData])
+  );
+
+  const hasActiveMatch = Boolean(
+    activeMatch && !activeMatch.tennisState.matchWinner
+  );
+
+  const handleClearHistory = () => {
+    if (typeof window !== "undefined" && window.confirm) {
+      if (!window.confirm("Clear recent match history?")) {
+        return;
+      }
+    } else {
+      Alert.alert(
+        "Clear match history",
+        "Remove all stored recent matches?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Clear",
+            style: "destructive",
+            onPress: () => {
+              clearHistory();
+              setHistory([]);
+            }
+          }
+        ]
+      );
+      return;
+    }
+    clearHistory();
+    setHistory([]);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Match Setup</Text>
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.appTitle}>Rackt</Text>
+            <Text style={styles.tagline}>
+              Match tracking that feels tournament-ready.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setSettingsOpen(true)}
+          >
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => setSettingsOpen(true)}
+          style={[styles.card, styles.primaryCard]}
+          onPress={() => router.push("/new")}
         >
-          <Text style={styles.settingsButtonText}>⚙️</Text>
+          <Text style={styles.cardEyebrow}>Quick start</Text>
+          <Text style={styles.cardTitle}>Start a new match</Text>
+          <Text style={styles.cardBody}>
+            Set players, format, and jump straight to the scoreboard.
+          </Text>
+          <View style={styles.cardCta}>
+            <Text style={styles.cardCtaText}>New Match</Text>
+          </View>
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Player A Name</Text>
-        <TextInput
-          style={styles.input}
-          value={playerAName}
-          onChangeText={setPlayerAName}
-          placeholder="Player A"
-          placeholderTextColor={colors.muted}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Player B Name</Text>
-        <TextInput
-          style={styles.input}
-          value={playerBName}
-          onChangeText={setPlayerBName}
-          placeholder="Player B"
-          placeholderTextColor={colors.muted}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Match Format</Text>
-        <View style={styles.toggleRow}>
+        {hasActiveMatch && activeMatch && (
           <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              bestOf === 3 && styles.toggleButtonActive
-            ]}
-            onPress={() => setBestOf(3)}
+            style={[styles.card, styles.secondaryCard]}
+            onPress={() => router.push("/match")}
           >
-            <Text
-              style={[
-                styles.toggleText,
-                bestOf === 3 && styles.toggleTextActive
-              ]}
-            >
-              Best of 3
+            <Text style={styles.cardEyebrow}>Continue last match</Text>
+            <Text style={styles.cardTitle}>
+              {activeMatch.config.playerAName} vs{" "}
+              {activeMatch.config.playerBName}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              bestOf === 5 && styles.toggleButtonActive
-            ]}
-            onPress={() => setBestOf(5)}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                bestOf === 5 && styles.toggleTextActive
-              ]}
-            >
-              Best of 5
+            <Text style={styles.cardBody}>
+              Jump back into the live scoreboard and keep the momentum going.
             </Text>
+            <View style={styles.cardCtaSecondary}>
+              <Text style={styles.cardCtaTextSecondary}>Continue Match</Text>
+            </View>
           </TouchableOpacity>
+        )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Matches</Text>
+          {history.length > 0 && (
+            <TouchableOpacity onPress={handleClearHistory}>
+              <Text style={styles.clearButton}>Clear history</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Tie-break at 6–6</Text>
-          <Switch
-            value={tiebreakAt6All}
-            onValueChange={setTiebreakAt6All}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={colors.surface}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Starting Server</Text>
-        <View style={styles.toggleRow}>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              startingServer === "A" && styles.toggleButtonActive
-            ]}
-            onPress={() => setStartingServer("A")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                startingServer === "A" && styles.toggleTextActive
-              ]}
-            >
-              {playerAName.trim() || "Player A"}
+        {history.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No matches yet</Text>
+            <Text style={styles.emptyBody}>
+              Finish a match to see the recap appear here instantly.
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              startingServer === "B" && styles.toggleButtonActive
-            ]}
-            onPress={() => setStartingServer("B")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                startingServer === "B" && styles.toggleTextActive
-              ]}
-            >
-              {playerBName.trim() || "Player B"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.startButton} onPress={handleStartMatch}>
-        <Text style={styles.startButtonText}>Start Match</Text>
-      </TouchableOpacity>
+          </View>
+        ) : (
+          history.slice(0, 10).map((record) => {
+            const opponent = getOpponentName(record);
+            const duration =
+              record.durationSeconds > 0
+                ? `• ${formatDuration(record.durationSeconds)}`
+                : "";
+            return (
+              <TouchableOpacity
+                key={record.id}
+                style={styles.historyCard}
+                onPress={() => router.push(`/history/${record.id}`)}
+              >
+                <View style={styles.historyRow}>
+                  <Text style={styles.historyWinner}>{record.winner}</Text>
+                  <Text style={styles.historyScore}>
+                    {record.finalScoreString}
+                  </Text>
+                </View>
+                <Text style={styles.historyLine}>
+                  {record.winner} def. {opponent}
+                </Text>
+                <Text style={styles.historyMeta}>
+                  {formatDate(record.createdAt)} {duration}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </ScrollView>
 
       <SettingsDrawer
         visible={settingsOpen}
@@ -183,96 +190,164 @@ export default function SetupMatch() {
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
+    screen: {
       flex: 1,
-      padding: 24,
-      justifyContent: "center",
       backgroundColor: colors.background
+    },
+    container: {
+      padding: 24,
+      paddingBottom: 120,
+      gap: 20
     },
     headerRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 24
+      alignItems: "flex-start",
+      gap: 16
     },
-    settingsButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: colors.surfaceAlt,
-      borderWidth: 1,
-      borderColor: colors.border
-    },
-    settingsButtonText: {
-      fontSize: 16
-    },
-    title: {
-      fontSize: 28,
+    appTitle: {
+      fontSize: 32,
       fontWeight: "700",
       color: colors.text
     },
-    section: {
-      marginBottom: 18
-    },
-    label: {
-      fontSize: 14,
-      textTransform: "uppercase",
-      letterSpacing: 1.2,
+    tagline: {
       color: colors.muted,
-      marginBottom: 8
+      marginTop: 4,
+      maxWidth: 220
     },
-    input: {
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 16,
-      color: colors.text,
+    settingsButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       borderWidth: 1,
-      borderColor: colors.border
-    },
-    toggleRow: {
-      flexDirection: "row",
-      gap: 12
-    },
-    toggleButton: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
       alignItems: "center",
+      justifyContent: "center"
+    },
+    settingsIcon: {
+      fontSize: 16
+    },
+    card: {
+      padding: 20,
+      borderRadius: 20,
+      borderWidth: 1
+    },
+    primaryCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border
+    },
+    secondaryCard: {
+      backgroundColor: colors.surfaceAlt,
+      borderColor: colors.border
+    },
+    cardEyebrow: {
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1.4,
+      fontSize: 12
+    },
+    cardTitle: {
+      marginTop: 8,
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: "700"
+    },
+    cardBody: {
+      marginTop: 8,
+      color: colors.muted,
+      fontSize: 14,
+      lineHeight: 20
+    },
+    cardCta: {
+      marginTop: 16,
+      alignSelf: "flex-start",
+      backgroundColor: colors.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 999
+    },
+    cardCtaText: {
+      color: "#fff",
+      fontWeight: "700",
+      fontSize: 14
+    },
+    cardCtaSecondary: {
+      marginTop: 16,
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 8
+    },
+    cardCtaTextSecondary: {
+      color: colors.text,
+      fontWeight: "700",
+      fontSize: 14
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 8
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text
+    },
+    clearButton: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    emptyState: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border
     },
-    toggleButtonActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent
-    },
-    toggleText: {
+    emptyTitle: {
       color: colors.text,
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: "600"
     },
-    toggleTextActive: {
-      color: "#fff"
+    emptyBody: {
+      marginTop: 6,
+      color: colors.muted,
+      fontSize: 13
     },
-    switchRow: {
+    historyCard: {
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6
+    },
+    historyRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center"
     },
-    startButton: {
-      marginTop: 16,
-      paddingVertical: 16,
-      borderRadius: 14,
-      backgroundColor: colors.accent,
-      alignItems: "center"
-    },
-    startButtonText: {
-      color: "#fff",
-      fontSize: 18,
+    historyWinner: {
+      color: colors.text,
+      fontSize: 16,
       fontWeight: "700"
+    },
+    historyScore: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700"
+    },
+    historyLine: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: "600"
+    },
+    historyMeta: {
+      color: colors.muted,
+      fontSize: 12
     }
   });
