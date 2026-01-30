@@ -1,7 +1,7 @@
 import { getSetWinner, resolveTiebreakTo, shouldStartTiebreak } from "./rules";
 import { MatchOptions, Player, SetScore, TennisState } from "./types";
 
-const DEFAULT_OPTIONS: Required<MatchOptions> = {
+const DEFAULT_OPTIONS: MatchOptions = {
   bestOf: 3,
   tiebreakAt6All: true,
   startingServer: "A",
@@ -42,13 +42,13 @@ const serverForPoint = (startServer: Player, pointNumber: number): Player => {
   return blockIndex % 2 === 0 ? otherPlayer(startServer) : startServer;
 };
 
-const countSetsWon = (sets: SetScore[]): { winsA: number; winsB: number } => {
+const countSetsWon = (
+  sets: SetScore[],
+  rules: Pick<TennisState, "tiebreakAt6All" | "shortSetTo">
+): { winsA: number; winsB: number } => {
   return sets.reduce(
     (acc, set) => {
-      const winner = isSetWin(set.gamesA, set.gamesB, {
-        tiebreakAt6All: state.tiebreakAt6All,
-        shortSetTo: state.shortSetTo
-      });
+      const winner = isSetWin(set.gamesA, set.gamesB, rules);
       if (winner === "A") {
         return { winsA: acc.winsA + 1, winsB: acc.winsB };
       }
@@ -65,9 +65,11 @@ export const initialState = (options: MatchOptions = {}): TennisState => {
   const resolved = { ...DEFAULT_OPTIONS, ...options };
   const startingServer = resolved.startingServer ?? "A";
   const superTiebreakOnly = resolved.superTiebreakOnly ?? false;
+  const bestOf = resolved.bestOf ?? 3;
+  const tiebreakAt6All = resolved.tiebreakAt6All ?? true;
   return {
-    bestOf: resolved.bestOf,
-    tiebreakAt6All: resolved.tiebreakAt6All,
+    bestOf,
+    tiebreakAt6All,
     tiebreakTo: resolveTiebreakTo(resolved.tiebreakTo),
     superTiebreakOnly,
     shortSetTo: resolved.shortSetTo,
@@ -103,7 +105,7 @@ const startNextSet = (state: TennisState): TennisState => {
 };
 
 const finalizeMatchIfNeeded = (state: TennisState): TennisState => {
-  const { winsA, winsB } = countSetsWon(state.sets);
+  const { winsA, winsB } = countSetsWon(state.sets, state);
   const needed = Math.ceil(state.bestOf / 2);
   if (winsA >= needed) {
     return { ...state, matchWinner: "A" };

@@ -17,7 +17,7 @@ export type SetScore = {
 export type TennisState = {
   bestOf: 1 | 3 | 5;
   tiebreakAt6All: boolean;
-  tiebreakTo: number;
+  tiebreakTo: 7 | 10;
   superTiebreakOnly?: boolean;
   shortSetTo?: number;
   sets: SetScore[];

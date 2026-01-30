@@ -9,7 +9,7 @@ export type MatchRecord = {
   };
   bestOf: 1 | 3 | 5;
   tiebreakRule: "TIEBREAK_AT_6_ALL" | "ADVANTAGE";
-  tiebreakTo?: number;
+  tiebreakTo?: 7 | 10;
   superTiebreakOnly?: boolean;
   shortSetTo?: number;
   finalScoreString: string;

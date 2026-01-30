@@ -8,7 +8,7 @@ export type MatchRules = {
 export const resolveSetGamesTo = (shortSetTo?: number): number =>
   shortSetTo ?? 6;
 
-export const resolveTiebreakTo = (tiebreakTo?: number): number =>
+export const resolveTiebreakTo = (tiebreakTo?: 7 | 10): 7 | 10 =>
   tiebreakTo ?? 7;
 
 export const getSetWinner = (
