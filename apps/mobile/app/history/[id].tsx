@@ -21,11 +21,18 @@ const buildSummaryFromRecord = (record: MatchRecord): MatchSummary => {
   const gamesB = record.sets.reduce((acc, set) => acc + set.gamesB, 0);
   const setsA = record.sets.filter((set) => set.gamesA > set.gamesB).length;
   const setsB = record.sets.filter((set) => set.gamesB > set.gamesA).length;
-  const tiebreaksPlayed = record.sets.filter(
-    (set) =>
-      (set.gamesA === 7 && set.gamesB === 6) ||
-      (set.gamesA === 6 && set.gamesB === 7)
-  ).length;
+  const tiebreakGamesTo = (record.shortSetTo ?? 6) + 1;
+  const tiebreaksPlayed = record.superTiebreakOnly
+    ? 1
+    : record.tiebreakRule === "TIEBREAK_AT_6_ALL"
+      ? record.sets.filter(
+          (set) =>
+            (set.gamesA === tiebreakGamesTo &&
+              set.gamesB === tiebreakGamesTo - 1) ||
+            (set.gamesA === tiebreakGamesTo - 1 &&
+              set.gamesB === tiebreakGamesTo)
+        ).length
+      : 0;
 
   const winnerId =
     record.winner === record.players.playerAName
@@ -84,6 +91,9 @@ export default function HistoryDetailScreen() {
       playerBName: record.players.playerBName,
       bestOf: record.bestOf,
       tiebreakAt6All: record.tiebreakRule === "TIEBREAK_AT_6_ALL",
+      tiebreakTo: record.tiebreakTo ?? 7,
+      superTiebreakOnly: record.superTiebreakOnly ?? false,
+      shortSetTo: record.shortSetTo,
       startingServer: "A",
       startTime: record.createdAt
     };

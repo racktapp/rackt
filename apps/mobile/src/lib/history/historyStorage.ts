@@ -7,8 +7,11 @@ export type MatchRecord = {
     playerAName: string;
     playerBName: string;
   };
-  bestOf: 3 | 5;
+  bestOf: 1 | 3 | 5;
   tiebreakRule: "TIEBREAK_AT_6_ALL" | "ADVANTAGE";
+  tiebreakTo?: 7 | 10;
+  superTiebreakOnly?: boolean;
+  shortSetTo?: number;
   finalScoreString: string;
   winner: string;
   durationSeconds: number;

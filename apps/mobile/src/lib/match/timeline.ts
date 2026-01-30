@@ -1,4 +1,5 @@
 import { InputAction } from "../input/actions";
+import { getSetWinner } from "../tennis/rules";
 import { Player, TennisState } from "../tennis/types";
 
 export type TimelineEventType =
@@ -19,18 +20,13 @@ export type TimelineEvent = {
 
 const setWinnerFromScore = (
   gamesA: number,
-  gamesB: number
-): Player | undefined => {
-  if (gamesA >= 6 || gamesB >= 6) {
-    if (Math.abs(gamesA - gamesB) >= 2) {
-      return gamesA > gamesB ? "A" : "B";
-    }
-  }
-  if (gamesA === 7 || gamesB === 7) {
-    return gamesA > gamesB ? "A" : "B";
-  }
-  return undefined;
-};
+  gamesB: number,
+  state: Pick<TennisState, "tiebreakAt6All" | "shortSetTo">
+): Player | undefined =>
+  getSetWinner(gamesA, gamesB, {
+    tiebreakAt6All: state.tiebreakAt6All,
+    shortSetTo: state.shortSetTo
+  });
 
 const buildEvent = (
   type: TimelineEventType,
@@ -74,7 +70,8 @@ export const deriveTimelineEvent = (
     const finishedSet = nextState.sets[prevState.currentSet];
     const winner = setWinnerFromScore(
       finishedSet.gamesA,
-      finishedSet.gamesB
+      finishedSet.gamesB,
+      nextState
     );
     if (winner) {
       return buildEvent("SET", "Set won", winner);

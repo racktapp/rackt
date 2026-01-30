@@ -24,7 +24,10 @@ export const applyAction = (
         action.options ?? {
           bestOf: currentState.bestOf,
           tiebreakAt6All: currentState.tiebreakAt6All,
-          startingServer: currentState.server
+          startingServer: currentState.server,
+          tiebreakTo: currentState.tiebreakTo,
+          superTiebreakOnly: currentState.superTiebreakOnly,
+          shortSetTo: currentState.shortSetTo
         }
       );
     case "TOGGLE_INPUT":

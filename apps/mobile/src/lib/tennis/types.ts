@@ -1,9 +1,12 @@
 export type Player = "A" | "B";
 
 export type MatchOptions = {
-  bestOf?: 3 | 5;
+  bestOf?: 1 | 3 | 5;
   tiebreakAt6All?: boolean;
   startingServer?: Player;
+  tiebreakTo?: 7 | 10;
+  superTiebreakOnly?: boolean;
+  shortSetTo?: number;
 };
 
 export type SetScore = {
@@ -12,8 +15,11 @@ export type SetScore = {
 };
 
 export type TennisState = {
-  bestOf: 3 | 5;
+  bestOf: 1 | 3 | 5;
   tiebreakAt6All: boolean;
+  tiebreakTo: 7 | 10;
+  superTiebreakOnly?: boolean;
+  shortSetTo?: number;
   sets: SetScore[];
   currentSet: number;
   gamePointsA: number;
