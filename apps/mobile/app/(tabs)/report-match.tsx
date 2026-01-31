@@ -14,6 +14,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "../../lib/supabase";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 type SportKey = "tennis" | "padel" | "badminton" | "table_tennis";
 type MatchFormat = "singles" | "doubles";
@@ -35,6 +36,7 @@ const formatProfileName = (profile: Profile) =>
   profile.full_name?.trim() || profile.username?.trim() || "Unknown player";
 
 export default function ReportMatchScreen() {
+  const { colors } = useSettings();
   const [user, setUser] = useState<User | null>(null);
   const [friends, setFriends] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +49,7 @@ export default function ReportMatchScreen() {
   const [scoreText, setScoreText] = useState("");
   const [isRanked, setIsRanked] = useState(true);
   const [winnerSide, setWinnerSide] = useState<1 | 2>(1);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     let isMounted = true;
@@ -413,6 +416,7 @@ export default function ReportMatchScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 6-3, 4-6, 10-8"
+              placeholderTextColor={colors.muted}
               value={scoreText}
               onChangeText={setScoreText}
             />
@@ -448,7 +452,12 @@ export default function ReportMatchScreen() {
               <Text style={styles.sectionTitle}>Ranked</Text>
               <Text style={styles.helperText}>Include this match in ratings.</Text>
             </View>
-            <Switch value={isRanked} onValueChange={setIsRanked} />
+            <Switch
+              value={isRanked}
+              onValueChange={setIsRanked}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.card}
+            />
           </View>
 
           <TouchableOpacity
@@ -469,105 +478,116 @@ export default function ReportMatchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    gap: 20
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  section: {
-    gap: 12
-  },
-  sectionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 16
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600"
-  },
-  subSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 12
-  },
-  helperText: {
-    color: "#666"
-  },
-  rowWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12
-  },
-  choiceButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#ddd"
-  },
-  choiceButtonActive: {
-    backgroundColor: "#111",
-    borderColor: "#111"
-  },
-  choiceButtonText: {
-    color: "#333",
-    fontWeight: "600"
-  },
-  choiceButtonTextActive: {
-    color: "#fff"
-  },
-  list: {
-    gap: 8
-  },
-  listRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#f5f5f5"
-  },
-  listLabel: {
-    fontWeight: "600"
-  },
-  listValue: {
-    color: "#666"
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10
-  },
-  primaryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#111",
-    alignItems: "center"
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 32
-  },
-  loadingText: {
-    color: "#666"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flexGrow: 1,
+      padding: 24,
+      gap: 20,
+      backgroundColor: colors.bg
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    section: {
+      gap: 12
+    },
+    sectionRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 16
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text
+    },
+    subSectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginTop: 12,
+      color: colors.text
+    },
+    helperText: {
+      color: colors.muted
+    },
+    rowWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12
+    },
+    choiceButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card
+    },
+    choiceButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
+    },
+    choiceButtonText: {
+      color: colors.text,
+      fontWeight: "600"
+    },
+    choiceButtonTextActive: {
+      color: "#0B1220"
+    },
+    list: {
+      gap: 8
+    },
+    listRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    listLabel: {
+      fontWeight: "600",
+      color: colors.text
+    },
+    listValue: {
+      color: colors.muted
+    },
+    textInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: colors.card,
+      color: colors.text
+    },
+    primaryButton: {
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: "center"
+    },
+    primaryButtonDisabled: {
+      opacity: 0.6
+    },
+    primaryButtonText: {
+      color: "#0B1220",
+      fontWeight: "600"
+    },
+    loadingState: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      paddingVertical: 32
+    },
+    loadingText: {
+      color: colors.muted
+    }
+  });

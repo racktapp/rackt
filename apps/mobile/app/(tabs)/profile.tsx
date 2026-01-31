@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Button,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,8 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "../../lib/supabase";
+import AppButton from "../../src/components/AppButton";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 const USERNAME_REGEX = /^[A-Za-z0-9_.]+$/;
 
@@ -24,6 +25,7 @@ type SportRating = {
 };
 
 export default function ProfileScreen() {
+  const { colors } = useSettings();
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
@@ -31,6 +33,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const displayUsername = useMemo(() => {
     if (!username.trim()) {
@@ -187,9 +190,10 @@ export default function ProfileScreen() {
           <Text style={styles.summaryName}>{displayFullName}</Text>
           <Text style={styles.summaryUsername}>@{displayUsername}</Text>
           <View style={styles.buttonRow}>
-            <Button
-              title={isEditing ? "Editing" : "Edit profile"}
+            <AppButton
+              label={isEditing ? "Editing" : "Edit profile"}
               onPress={() => setIsEditing((prev) => !prev)}
+              variant="secondary"
             />
           </View>
         </View>
@@ -204,6 +208,7 @@ export default function ProfileScreen() {
                 autoCorrect={false}
                 onChangeText={setUsername}
                 placeholder="Username"
+                placeholderTextColor={colors.muted}
                 style={styles.input}
                 value={username}
                 editable={!isSaving}
@@ -219,6 +224,7 @@ export default function ProfileScreen() {
                 autoCapitalize="words"
                 onChangeText={setFullName}
                 placeholder="Full name (optional)"
+                placeholderTextColor={colors.muted}
                 style={styles.input}
                 value={fullName}
                 editable={!isSaving}
@@ -229,8 +235,8 @@ export default function ProfileScreen() {
           </View>
           {isEditing && (
             <View style={styles.buttonRow}>
-              <Button
-                title={isSaving ? "Saving..." : "Save"}
+              <AppButton
+                label={isSaving ? "Saving..." : "Save"}
                 onPress={handleSave}
                 disabled={isSaving}
               />
@@ -261,93 +267,100 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff"
-  },
-  content: {
-    padding: 24,
-    gap: 20
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    backgroundColor: "#fff"
-  },
-  loadingText: {
-    color: "#6b7280"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  summaryCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f9fafb",
-    gap: 8
-  },
-  summaryName: {
-    fontSize: 20,
-    fontWeight: "700"
-  },
-  summaryUsername: {
-    color: "#6b7280"
-  },
-  section: {
-    gap: 12
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827"
-  },
-  field: {
-    gap: 8
-  },
-  label: {
-    fontSize: 14,
-    color: "#6b7280"
-  },
-  value: {
-    fontSize: 16,
-    color: "#111827"
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16
-  },
-  buttonRow: {
-    marginTop: 8,
-    alignSelf: "flex-start"
-  },
-  ratingsGrid: {
-    gap: 12
-  },
-  ratingCard: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    padding: 12,
-    gap: 4
-  },
-  ratingSport: {
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  ratingDetail: {
-    color: "#4b5563"
-  },
-  emptyText: {
-    color: "#6b7280"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg
+    },
+    content: {
+      padding: 24,
+      gap: 20
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      backgroundColor: colors.bg
+    },
+    loadingText: {
+      color: colors.muted
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    summaryCard: {
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardAlt,
+      gap: 8
+    },
+    summaryName: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.text
+    },
+    summaryUsername: {
+      color: colors.muted
+    },
+    section: {
+      gap: 12
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text
+    },
+    field: {
+      gap: 8
+    },
+    label: {
+      fontSize: 14,
+      color: colors.muted
+    },
+    value: {
+      fontSize: 16,
+      color: colors.text
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 16,
+      backgroundColor: colors.card,
+      color: colors.text
+    },
+    buttonRow: {
+      marginTop: 8,
+      alignSelf: "flex-start"
+    },
+    ratingsGrid: {
+      gap: 12
+    },
+    ratingCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      gap: 4,
+      backgroundColor: colors.card
+    },
+    ratingSport: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text
+    },
+    ratingDetail: {
+      color: colors.muted
+    },
+    emptyText: {
+      color: colors.muted
+    }
+  });

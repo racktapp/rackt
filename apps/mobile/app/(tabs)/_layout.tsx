@@ -2,10 +2,12 @@ import { useCallback, useState } from "react";
 import { Tabs, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { loadMatch } from "../../src/lib/storage/matchStorage";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const [hasActiveMatch, setHasActiveMatch] = useState(false);
+  const { colors } = useSettings();
 
   const refreshActiveMatch = useCallback(() => {
     const stored = loadMatch();
@@ -24,10 +26,14 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           height: 64 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 8
+          paddingTop: 8,
+          backgroundColor: colors.card,
+          borderTopColor: colors.border
         },
         tabBarLabelStyle: {
           fontSize: 12
@@ -41,7 +47,7 @@ export default function TabsLayout() {
           tabBarBadge: hasActiveMatch ? "•" : undefined,
           tabBarBadgeStyle: {
             backgroundColor: "transparent",
-            color: "#ef4444",
+            color: colors.danger,
             fontSize: 16
           }
         }}

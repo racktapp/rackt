@@ -9,9 +9,11 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "../../../lib/supabase";
+import { useSettings } from "../../../src/components/SettingsProvider";
 
 type MatchRow = {
   id: string;
@@ -81,6 +83,8 @@ export default function MatchDetailScreen() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isWinnerUpdating, setIsWinnerUpdating] = useState(false);
   const isFinalizingRef = useRef(false);
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const getConfirmationState = (rows: ConfirmationRow[]) => {
     const hasDisputed = rows.some((row) => row.status === "disputed");
@@ -372,7 +376,8 @@ export default function MatchDetailScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Match details</Text>
 
       {isLoading || !match ? (
@@ -538,119 +543,133 @@ export default function MatchDetailScreen() {
           ) : null}
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    gap: 16
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700"
-  },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 32
-  },
-  loadingText: {
-    color: "#666"
-  },
-  card: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
-    padding: 16,
-    gap: 6
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  cardMeta: {
-    color: "#666"
-  },
-  cardScore: {
-    fontWeight: "600"
-  },
-  cardStatus: {
-    color: "#333"
-  },
-  section: {
-    gap: 8
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600"
-  },
-  helperText: {
-    color: "#666"
-  },
-  playerName: {
-    fontSize: 15,
-    fontWeight: "600"
-  },
-  confirmationRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  confirmationStatus: {
-    color: "#666",
-    textTransform: "capitalize"
-  },
-  ratingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8
-  },
-  ratingDetail: {
-    color: "#333",
-    minWidth: 64,
-    textAlign: "right"
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 12
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center"
-  },
-  confirmButton: {
-    backgroundColor: "#111"
-  },
-  disputeButton: {
-    backgroundColor: "#b00020"
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-  winnerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd"
-  },
-  winnerButtonActive: {
-    backgroundColor: "#111",
-    borderColor: "#111"
-  },
-  winnerButtonText: {
-    fontWeight: "600",
-    color: "#333"
-  },
-  winnerButtonTextActive: {
-    color: "#fff"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.bg
+    },
+    container: {
+      flexGrow: 1,
+      padding: 24,
+      gap: 16
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: colors.text
+    },
+    loadingState: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      paddingVertical: 32
+    },
+    loadingText: {
+      color: colors.muted
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text
+    },
+    cardMeta: {
+      color: colors.muted
+    },
+    cardScore: {
+      fontWeight: "600",
+      color: colors.text
+    },
+    cardStatus: {
+      color: colors.muted
+    },
+    section: {
+      gap: 8
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text
+    },
+    helperText: {
+      color: colors.muted
+    },
+    playerName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text
+    },
+    confirmationRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    confirmationStatus: {
+      color: colors.muted,
+      textTransform: "capitalize"
+    },
+    ratingRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8
+    },
+    ratingDetail: {
+      color: colors.text,
+      minWidth: 64,
+      textAlign: "right"
+    },
+    actionRow: {
+      flexDirection: "row",
+      gap: 12
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: "center"
+    },
+    confirmButton: {
+      backgroundColor: colors.primary
+    },
+    disputeButton: {
+      backgroundColor: colors.danger
+    },
+    actionButtonText: {
+      color: "#0B1220",
+      fontWeight: "600"
+    },
+    winnerButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardAlt
+    },
+    winnerButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
+    },
+    winnerButtonText: {
+      fontWeight: "600",
+      color: colors.text
+    },
+    winnerButtonTextActive: {
+      color: "#0B1220"
+    }
+  });

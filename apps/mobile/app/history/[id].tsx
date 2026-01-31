@@ -16,6 +16,7 @@ import {
 } from "../../src/lib/history/historyStorage";
 import { MatchSummary } from "../../src/lib/match/summary";
 import { MatchConfig } from "../../src/lib/storage/matchStorage";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 const buildSummaryFromRecord = (record: MatchRecord): MatchSummary => {
   const gamesA = record.sets.reduce((acc, set) => acc + set.gamesA, 0);
@@ -63,6 +64,8 @@ export default function HistoryDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const [record, setRecord] = useState<MatchRecord | null>(null);
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     const id = typeof params.id === "string" ? params.id : params.id?.[0];
@@ -154,7 +157,9 @@ export default function HistoryDetailScreen() {
             style={[styles.actionButton, styles.actionPrimary]}
             onPress={() => router.push(`/(tabs)/new?rematchId=${record.id}`)}
           >
-            <Text style={styles.actionText}>Start rematch</Text>
+            <Text style={[styles.actionText, styles.actionTextPrimary]}>
+              Start rematch
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionSecondary]}
@@ -168,51 +173,57 @@ export default function HistoryDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0b0b0f"
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 120,
-    gap: 18
-  },
-  header: {
-    alignItems: "center",
-    gap: 6
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff"
-  },
-  subTitle: {
-    color: "#9da5b4"
-  },
-  label: {
-    fontSize: 14,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
-    color: "#9da5b4"
-  },
-  actions: {
-    gap: 12
-  },
-  actionButton: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center"
-  },
-  actionPrimary: {
-    backgroundColor: "#2f80ed"
-  },
-  actionSecondary: {
-    backgroundColor: "#1c1f26"
-  },
-  actionText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg
+    },
+    scrollContent: {
+      padding: 24,
+      paddingBottom: 120,
+      gap: 18
+    },
+    header: {
+      alignItems: "center",
+      gap: 6
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subTitle: {
+      color: colors.muted
+    },
+    label: {
+      fontSize: 14,
+      textTransform: "uppercase",
+      letterSpacing: 1.4,
+      color: colors.muted
+    },
+    actions: {
+      gap: 12
+    },
+    actionButton: {
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: "center"
+    },
+    actionPrimary: {
+      backgroundColor: colors.primary
+    },
+    actionSecondary: {
+      backgroundColor: colors.cardAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    actionText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "700"
+    },
+    actionTextPrimary: {
+      color: "#0B1220"
+    }
+  });

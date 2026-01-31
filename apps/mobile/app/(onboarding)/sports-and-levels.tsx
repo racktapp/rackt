@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { supabase } from "../../lib/supabase";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 type SportKey = "tennis" | "padel" | "badminton" | "table_tennis";
 
@@ -34,6 +35,7 @@ const DEFAULT_LEVEL = "3.0";
 const DEFAULT_RELIABILITY = "30";
 
 export default function SportsAndLevelsScreen() {
+  const { colors } = useSettings();
   const [selections, setSelections] = useState<Record<SportKey, SportSelection>>(
     () =>
       SPORTS.reduce(
@@ -50,6 +52,7 @@ export default function SportsAndLevelsScreen() {
       )
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const selectedCount = useMemo(
     () => Object.values(selections).filter((selection) => selection.selected)
@@ -222,6 +225,8 @@ export default function SportsAndLevelsScreen() {
                         onValueChange={(value) =>
                           updateHasLevel(sport.key, value)
                         }
+                        trackColor={{ false: colors.border, true: colors.primary }}
+                        thumbColor={colors.card}
                       />
                     </View>
                     {selection.hasLevel ? (
@@ -262,103 +267,107 @@ export default function SportsAndLevelsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff"
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 120
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 8
-  },
-  subtitle: {
-    color: "#4b5563",
-    marginBottom: 16
-  },
-  list: {
-    gap: 16
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#f9fafb",
-    gap: 12
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12
-  },
-  checkboxOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: "#111827",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff"
-  },
-  checkboxInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    backgroundColor: "#111827"
-  },
-  rowLabel: {
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  detailSection: {
-    gap: 12,
-    paddingTop: 4
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: "#374151",
-    flex: 1
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 80,
-    textAlign: "center",
-    backgroundColor: "#fff"
-  },
-  footer: {
-    padding: 24,
-    borderTopWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff"
-  },
-  finishButton: {
-    backgroundColor: "#111827",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center"
-  },
-  finishButtonDisabled: {
-    opacity: 0.7
-  },
-  finishText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg
+    },
+    scrollContent: {
+      padding: 24,
+      paddingBottom: 120
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      marginBottom: 8,
+      color: colors.text
+    },
+    subtitle: {
+      color: colors.muted,
+      marginBottom: 16
+    },
+    list: {
+      gap: 16
+    },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: colors.card,
+      gap: 12
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12
+    },
+    checkboxOuter: {
+      width: 24,
+      height: 24,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.card
+    },
+    checkboxInner: {
+      width: 12,
+      height: 12,
+      borderRadius: 3,
+      backgroundColor: colors.primary
+    },
+    rowLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text
+    },
+    detailSection: {
+      gap: 12,
+      paddingTop: 4
+    },
+    detailRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12
+    },
+    detailLabel: {
+      fontSize: 14,
+      color: colors.muted,
+      flex: 1
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      minWidth: 80,
+      textAlign: "center",
+      backgroundColor: colors.card,
+      color: colors.text
+    },
+    footer: {
+      padding: 24,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card
+    },
+    finishButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center"
+    },
+    finishButtonDisabled: {
+      opacity: 0.7
+    },
+    finishText: {
+      color: "#0B1220",
+      fontWeight: "600",
+      fontSize: 16
+    }
+  });

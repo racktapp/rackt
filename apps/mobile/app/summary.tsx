@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import MatchSummaryView from "../src/components/MatchSummaryView";
+import { useSettings } from "../src/components/SettingsProvider";
 import { formatDate, formatDuration } from "../src/lib/history/historyFormat";
 import { addToHistory } from "../src/lib/history/historyStorage";
 import {
@@ -37,6 +38,8 @@ const getStorage = (): Storage | null => {
 export default function SummaryScreen() {
   const router = useRouter();
   const [match, setMatch] = useState<StoredMatch | null>(null);
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     const stored = loadMatch();
@@ -155,12 +158,12 @@ export default function SummaryScreen() {
       if (!context) {
         throw new Error("Canvas unavailable");
       }
-      context.fillStyle = "#151923";
+      context.fillStyle = colors.card;
       context.fillRect(0, 0, width, height);
-      context.strokeStyle = "#2a2f3a";
+      context.strokeStyle = colors.border;
       context.lineWidth = 6;
       context.strokeRect(24, 24, width - 48, height - 48);
-      context.fillStyle = "#ffffff";
+      context.fillStyle = colors.text;
       context.font = "700 54px Arial";
       context.fillText(
         match.config.teamA.players.map((player) => player.name).join(" / "),
@@ -172,10 +175,10 @@ export default function SummaryScreen() {
         80,
         260
       );
-      context.fillStyle = "#7fb4ff";
+      context.fillStyle = colors.primary;
       context.font = "700 40px Arial";
       context.fillText(summary.finalScoreString, 80, 360);
-      context.fillStyle = "#9da5b4";
+      context.fillStyle = colors.muted;
       context.font = "500 28px Arial";
       context.fillText(matchDate, 80, 420);
       context.font = "600 24px Arial";
@@ -240,7 +243,9 @@ export default function SummaryScreen() {
             style={[styles.actionButton, styles.actionPrimary]}
             onPress={handleSaveCard}
           >
-            <Text style={styles.actionText}>Save result card</Text>
+            <Text style={[styles.actionText, styles.actionTextPrimary]}>
+              Save result card
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionSecondary]}
@@ -266,60 +271,66 @@ export default function SummaryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0b0b0f"
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 120,
-    gap: 18
-  },
-  header: {
-    alignItems: "center",
-    gap: 6
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff"
-  },
-  subTitle: {
-    color: "#9da5b4"
-  },
-  label: {
-    fontSize: 14,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
-    color: "#9da5b4"
-  },
-  actions: {
-    gap: 12
-  },
-  actionButton: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center"
-  },
-  actionPrimary: {
-    backgroundColor: "#2f80ed"
-  },
-  actionSecondary: {
-    backgroundColor: "#1c1f26"
-  },
-  actionGhost: {
-    borderWidth: 1,
-    borderColor: "#2a2f3a"
-  },
-  actionText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700"
-  },
-  actionGhostText: {
-    color: "#9da5b4",
-    fontSize: 15,
-    fontWeight: "600"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg
+    },
+    scrollContent: {
+      padding: 24,
+      paddingBottom: 120,
+      gap: 18
+    },
+    header: {
+      alignItems: "center",
+      gap: 6
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subTitle: {
+      color: colors.muted
+    },
+    label: {
+      fontSize: 14,
+      textTransform: "uppercase",
+      letterSpacing: 1.4,
+      color: colors.muted
+    },
+    actions: {
+      gap: 12
+    },
+    actionButton: {
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: "center"
+    },
+    actionPrimary: {
+      backgroundColor: colors.primary
+    },
+    actionSecondary: {
+      backgroundColor: colors.cardAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    actionGhost: {
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    actionText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "700"
+    },
+    actionTextPrimary: {
+      color: "#0B1220"
+    },
+    actionGhostText: {
+      color: colors.muted,
+      fontSize: 15,
+      fontWeight: "600"
+    }
+  });

@@ -275,7 +275,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     container: {
       padding: 24,
@@ -324,7 +324,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 14,
       paddingVertical: 12,
       color: colors.text,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     rowWrap: {
       flexDirection: "row",
@@ -337,18 +337,18 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     choiceButtonActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
     },
     choiceButtonText: {
       color: colors.text,
       fontWeight: "600"
     },
     choiceButtonTextActive: {
-      color: "#fff"
+      color: "#0B1220"
     },
     loadingState: {
       padding: 16,
@@ -366,7 +366,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     listRow: {
       flexDirection: "row",
@@ -388,7 +388,7 @@ const createStyles = (colors: ThemeColors) =>
     primaryButton: {
       marginTop: 4,
       alignItems: "center",
-      backgroundColor: colors.accent,
+      backgroundColor: colors.primary,
       paddingVertical: 14,
       borderRadius: 16
     },
@@ -396,7 +396,7 @@ const createStyles = (colors: ThemeColors) =>
       opacity: 0.7
     },
     primaryButtonText: {
-      color: "#fff",
+      color: "#0B1220",
       fontWeight: "700",
       fontSize: 15
     }

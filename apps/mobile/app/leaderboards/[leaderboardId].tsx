@@ -273,7 +273,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     container: {
       padding: 24,
@@ -321,7 +321,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       gap: 8
     },
     emptyTitle: {
@@ -351,7 +351,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     listRow: {
       flexDirection: "row",

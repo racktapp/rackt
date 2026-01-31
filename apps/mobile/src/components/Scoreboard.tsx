@@ -149,7 +149,7 @@ export default function Scoreboard() {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     card: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderRadius: 16,
       padding: 16,
       gap: 16,
@@ -173,7 +173,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border
     },
@@ -191,17 +191,17 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: "#e6f6ed",
+      backgroundColor: colors.cardAlt,
       gap: 6
     },
     connectionDot: {
       width: 8,
       height: 8,
       borderRadius: 999,
-      backgroundColor: "#1d7a46"
+      backgroundColor: colors.success
     },
     connectionText: {
-      color: "#1d7a46",
+      color: colors.success,
       fontSize: 12,
       fontWeight: "600"
     },
@@ -217,7 +217,7 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       padding: 12,
       borderRadius: 12,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       alignItems: "center",
       gap: 8
     },
@@ -235,10 +235,10 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 999,
-      backgroundColor: colors.text
+      backgroundColor: colors.primary
     },
     scoreButtonText: {
-      color: colors.surface,
+      color: "#0B1220",
       fontWeight: "600"
     },
     actionRow: {
@@ -248,7 +248,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 12,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border
     },

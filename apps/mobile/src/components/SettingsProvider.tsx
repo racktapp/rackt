@@ -17,15 +17,20 @@ import {
   Settings,
   ThemeSetting
 } from "../lib/settings/settings";
+import { colorsDark, colorsLight } from "../theme/colors";
 
 export type ThemeColors = {
-  background: string;
-  surface: string;
-  surfaceAlt: string;
+  bg: string;
+  card: string;
+  cardAlt: string;
   text: string;
   muted: string;
   border: string;
-  accent: string;
+  primary: string;
+  primaryPressed: string;
+  highlight: string;
+  danger: string;
+  success: string;
   overlay: string;
 };
 
@@ -38,26 +43,8 @@ type SettingsContextValue = {
 };
 
 const themeTokens: Record<"light" | "dark", ThemeColors> = {
-  light: {
-    background: "#f6f7fb",
-    surface: "#ffffff",
-    surfaceAlt: "#f1f3f7",
-    text: "#101318",
-    muted: "#667085",
-    border: "#e1e5ee",
-    accent: "#2f80ed",
-    overlay: "rgba(10, 10, 20, 0.35)"
-  },
-  dark: {
-    background: "#0b0b0f",
-    surface: "#12151c",
-    surfaceAlt: "#151923",
-    text: "#ffffff",
-    muted: "#9da5b4",
-    border: "#242a36",
-    accent: "#2f80ed",
-    overlay: "rgba(4, 6, 10, 0.6)"
-  }
+  light: colorsLight,
+  dark: colorsDark
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -74,30 +61,30 @@ const ensureThemeStyleTag = (): void => {
   style.id = styleId;
   style.textContent = `
 :root {
-  --rackt-background: ${themeTokens.light.background};
-  --rackt-surface: ${themeTokens.light.surface};
+  --rackt-background: ${themeTokens.light.bg};
+  --rackt-surface: ${themeTokens.light.card};
   --rackt-text: ${themeTokens.light.text};
   --rackt-muted: ${themeTokens.light.muted};
   --rackt-border: ${themeTokens.light.border};
 }
 :root[data-theme="light"] {
-  --rackt-background: ${themeTokens.light.background};
-  --rackt-surface: ${themeTokens.light.surface};
+  --rackt-background: ${themeTokens.light.bg};
+  --rackt-surface: ${themeTokens.light.card};
   --rackt-text: ${themeTokens.light.text};
   --rackt-muted: ${themeTokens.light.muted};
   --rackt-border: ${themeTokens.light.border};
 }
 :root[data-theme="dark"] {
-  --rackt-background: ${themeTokens.dark.background};
-  --rackt-surface: ${themeTokens.dark.surface};
+  --rackt-background: ${themeTokens.dark.bg};
+  --rackt-surface: ${themeTokens.dark.card};
   --rackt-text: ${themeTokens.dark.text};
   --rackt-muted: ${themeTokens.dark.muted};
   --rackt-border: ${themeTokens.dark.border};
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --rackt-background: ${themeTokens.dark.background};
-    --rackt-surface: ${themeTokens.dark.surface};
+    --rackt-background: ${themeTokens.dark.bg};
+    --rackt-surface: ${themeTokens.dark.card};
     --rackt-text: ${themeTokens.dark.text};
     --rackt-muted: ${themeTokens.dark.muted};
     --rackt-border: ${themeTokens.dark.border};

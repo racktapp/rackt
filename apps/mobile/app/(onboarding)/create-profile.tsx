@@ -2,7 +2,6 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
-  Button,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -12,15 +11,19 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "../../lib/supabase";
+import AppButton from "../../src/components/AppButton";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 const USERNAME_REGEX = /^[A-Za-z0-9_.]+$/;
 
 export default function CreateProfileScreen() {
+  const { colors } = useSettings();
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [isChecking, setIsChecking] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const styles = createStyles(colors);
 
   useEffect(() => {
     let isMounted = true;
@@ -126,6 +129,7 @@ export default function CreateProfileScreen() {
           autoCorrect={false}
           onChangeText={setUsername}
           placeholder="Username"
+          placeholderTextColor={colors.muted}
           style={styles.input}
           value={username}
           editable={!isChecking && !isSubmitting}
@@ -134,13 +138,14 @@ export default function CreateProfileScreen() {
           autoCapitalize="words"
           onChangeText={setFullName}
           placeholder="Full name (optional)"
+          placeholderTextColor={colors.muted}
           style={styles.input}
           value={fullName}
           editable={!isChecking && !isSubmitting}
         />
         <View style={styles.buttonRow}>
-          <Button
-            title={isSubmitting ? "Saving..." : "Continue"}
+          <AppButton
+            label={isSubmitting ? "Saving..." : "Continue"}
             onPress={handleContinue}
             disabled={isSubmitting || isChecking}
           />
@@ -150,31 +155,35 @@ export default function CreateProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: "#fff"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  subtitle: {
-    color: "#4b5563"
-  },
-  form: {
-    gap: 12
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10
-  },
-  buttonRow: {
-    marginTop: 8
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 24,
+      gap: 16,
+      backgroundColor: colors.bg
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subtitle: {
+      color: colors.muted
+    },
+    form: {
+      gap: 12
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      backgroundColor: colors.card,
+      color: colors.text
+    },
+    buttonRow: {
+      marginTop: 8
+    }
+  });
