@@ -32,6 +32,10 @@ const getOpponentName = (record: MatchRecord): string => {
   return record.players.playerBName;
 };
 
+const formatTeamName = (
+  team: StoredMatch["config"]["teamA"]
+): string => team.players.map((player) => player.name).join(" / ");
+
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useSettings();
@@ -55,7 +59,7 @@ export default function HomeScreen() {
   );
 
   const hasActiveMatch = Boolean(
-    activeMatch && !activeMatch.tennisState.matchWinner
+    activeMatch && !activeMatch.matchState.score.matchWinner
   );
 
   const handleClearHistory = () => {
@@ -155,8 +159,8 @@ export default function HomeScreen() {
           >
             <Text style={styles.cardEyebrow}>Continue last match</Text>
             <Text style={styles.cardTitle}>
-              {activeMatch.config.playerAName} vs{" "}
-              {activeMatch.config.playerBName}
+              {formatTeamName(activeMatch.config.teamA)} vs{" "}
+              {formatTeamName(activeMatch.config.teamB)}
             </Text>
             <Text style={styles.cardBody}>
               Jump back into the live scoreboard and keep the momentum going.

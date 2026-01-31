@@ -11,6 +11,11 @@ type MatchSummaryViewProps = {
   durationLabel: string;
 };
 
+const formatTeamName = (config: MatchConfig, teamId: "A" | "B") => {
+  const team = teamId === "A" ? config.teamA : config.teamB;
+  return team.players.map((player) => player.name).join(" / ");
+};
+
 export default function MatchSummaryView({
   config,
   summary,
@@ -31,10 +36,10 @@ export default function MatchSummaryView({
         <View style={styles.tableHeader}>
           <Text style={[styles.tableCell, styles.tableLabel]}>Set</Text>
           <Text style={[styles.tableCell, styles.tableLabel]}>
-            {config.playerAName}
+            {formatTeamName(config, "A")}
           </Text>
           <Text style={[styles.tableCell, styles.tableLabel]}>
-            {config.playerBName}
+            {formatTeamName(config, "B")}
           </Text>
         </View>
         {summary.setScores.map((set) => (
@@ -76,11 +81,11 @@ export default function MatchSummaryView({
         <Text style={styles.cardTitle}>Result Card</Text>
         <View style={styles.cardPreview}>
           <View style={styles.cardRow}>
-            <Text style={styles.cardPlayer}>{config.playerAName}</Text>
+            <Text style={styles.cardPlayer}>{formatTeamName(config, "A")}</Text>
             <Text style={styles.cardScore}>{summary.finalScoreString}</Text>
           </View>
           <View style={styles.cardRow}>
-            <Text style={styles.cardPlayer}>{config.playerBName}</Text>
+            <Text style={styles.cardPlayer}>{formatTeamName(config, "B")}</Text>
             <Text style={styles.cardMeta}>{matchDate}</Text>
           </View>
           <View style={styles.cardFooter}>

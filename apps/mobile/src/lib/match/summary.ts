@@ -1,6 +1,6 @@
 import { MatchConfig } from "../storage/matchStorage";
 import { getSetWinner, resolveSetGamesTo } from "../tennis/rules";
-import { Player, SetScore, TennisState } from "../tennis/types";
+import { MatchState, TeamId, TennisPadelScore } from "../scoring/engine";
 import { TimelineEvent } from "./timeline";
 
 export type SetSummary = {
@@ -20,7 +20,7 @@ export type MatchSummaryCounts = {
 };
 
 export type MatchSummary = {
-  winnerId: Player | null;
+  winnerId: TeamId | null;
   winnerName: string;
   setScores: SetSummary[];
   finalScoreString: string;
@@ -29,15 +29,26 @@ export type MatchSummary = {
   counts: MatchSummaryCounts;
 };
 
-const countSetsWon = (
-  sets: SetScore[],
-  config: MatchConfig
-): { winsA: number; winsB: number } => {
-  return sets.reduce(
+const isTennisPadelScore = (
+  score: MatchState["score"]
+): score is TennisPadelScore => score.sport !== "badminton";
+
+const countSetsWon = (state: MatchState): { winsA: number; winsB: number } => {
+  const score = state.score;
+  if (!isTennisPadelScore(score)) {
+    const gamesWonA = score.games.filter(
+      (game) => game.pointsA > game.pointsB
+    ).length;
+    const gamesWonB = score.games.filter(
+      (game) => game.pointsB > game.pointsA
+    ).length;
+    return { winsA: gamesWonA, winsB: gamesWonB };
+  }
+  return score.sets.reduce(
     (acc, set) => {
       const winner = getSetWinner(set.gamesA, set.gamesB, {
-        tiebreakAt6All: config.tiebreakAt6All,
-        shortSetTo: config.shortSetTo
+        tiebreakAt6All: score.tiebreakAt6All,
+        shortSetTo: score.shortSetTo
       });
       if (winner === "A") {
         return { winsA: acc.winsA + 1, winsB: acc.winsB };
@@ -51,8 +62,18 @@ const countSetsWon = (
   );
 };
 
-const sumGames = (sets: SetScore[]): { gamesA: number; gamesB: number } => {
-  return sets.reduce(
+const sumGames = (state: MatchState): { gamesA: number; gamesB: number } => {
+  const score = state.score;
+  if (!isTennisPadelScore(score)) {
+    return score.games.reduce(
+      (acc, game) => ({
+        gamesA: acc.gamesA + game.pointsA,
+        gamesB: acc.gamesB + game.pointsB
+      }),
+      { gamesA: 0, gamesB: 0 }
+    );
+  }
+  return score.sets.reduce(
     (acc, set) => ({
       gamesA: acc.gamesA + set.gamesA,
       gamesB: acc.gamesB + set.gamesB
@@ -70,10 +91,16 @@ export const buildMatchSummary = ({
   timeline
 }: {
   config: MatchConfig;
-  finalState: TennisState;
+  finalState: MatchState;
   timeline: TimelineEvent[];
 }): MatchSummary => {
-  const matchEndEvent = timeline.find((event) => event.type === "MATCH_END");
+  let matchEndEvent: TimelineEvent | undefined;
+  for (const event of timeline) {
+    if (event.type === "MATCH_END") {
+      matchEndEvent = event;
+      break;
+    }
+  }
   const endedAt = matchEndEvent?.ts ?? Date.now();
   const startTime = config.startTime ?? endedAt;
   const durationSeconds = Math.max(
@@ -81,56 +108,72 @@ export const buildMatchSummary = ({
     Math.floor((endedAt - startTime) / 1000)
   );
 
-  const relevantSets = finalState.sets.slice(0, finalState.currentSet + 1);
+  const score = finalState.score;
+  const isBadminton = !isTennisPadelScore(score);
   const isSuperTiebreak = Boolean(config.superTiebreakOnly);
-  const setScores = isSuperTiebreak
-    ? [
-        {
-          setNumber: 1,
-          gamesA: finalState.tiebreakPointsA,
-          gamesB: finalState.tiebreakPointsB
-        }
-      ]
-    : relevantSets.map((set, index) => ({
+  const setScores = isBadminton
+    ? score.games.map((game, index) => ({
         setNumber: index + 1,
-        gamesA: set.gamesA,
-        gamesB: set.gamesB
-      }));
+        gamesA: game.pointsA,
+        gamesB: game.pointsB
+      }))
+    : isSuperTiebreak
+      ? [
+          {
+            setNumber: 1,
+            gamesA: score.tiebreakPointsA,
+            gamesB: score.tiebreakPointsB
+          }
+        ]
+      : score.sets
+          .slice(0, score.currentSet + 1)
+          .map((set, index) => ({
+            setNumber: index + 1,
+            gamesA: set.gamesA,
+            gamesB: set.gamesB
+          }));
 
   const finalScoreString = setScores
     .map((set) => formatScore(set.gamesA, set.gamesB))
     .join(", ");
 
-  const { winsA, winsB } = isSuperTiebreak
+  const { winsA, winsB } = isSuperTiebreak && !isBadminton
     ? {
-        winsA: finalState.matchWinner === "A" ? 1 : 0,
-        winsB: finalState.matchWinner === "B" ? 1 : 0
+        winsA: score.matchWinner === "A" ? 1 : 0,
+        winsB: score.matchWinner === "B" ? 1 : 0
       }
-    : countSetsWon(relevantSets, config);
+    : countSetsWon(finalState);
   const winnerId =
-    finalState.matchWinner ??
+    finalState.score.matchWinner ??
     (winsA > winsB ? "A" : winsB > winsA ? "B" : null);
   const winnerName =
     winnerId === "A"
-      ? config.playerAName
+      ? config.teamA.players.map((player) => player.name).join(" / ")
       : winnerId === "B"
-        ? config.playerBName
+        ? config.teamB.players.map((player) => player.name).join(" / ")
         : "";
 
-  const { gamesA, gamesB } = isSuperTiebreak
-    ? {
-        gamesA: finalState.tiebreakPointsA,
-        gamesB: finalState.tiebreakPointsB
-      }
-    : sumGames(relevantSets);
+  const { gamesA, gamesB } =
+    isSuperTiebreak && isTennisPadelScore(score)
+      ? {
+          gamesA: score.tiebreakPointsA,
+          gamesB: score.tiebreakPointsB
+        }
+      : sumGames(finalState);
   const tiebreakGamesTo = resolveSetGamesTo(config.shortSetTo) + 1;
-  const tiebreaksPlayed = isSuperTiebreak
-    ? 1
-    : relevantSets.filter(
-        (set) =>
-          (set.gamesA === tiebreakGamesTo && set.gamesB === tiebreakGamesTo - 1) ||
-          (set.gamesA === tiebreakGamesTo - 1 && set.gamesB === tiebreakGamesTo)
-      ).length;
+  const tiebreaksPlayed = isBadminton
+    ? 0
+    : isSuperTiebreak
+      ? 1
+      : score.sets
+          .slice(0, score.currentSet + 1)
+          .filter(
+            (set) =>
+              (set.gamesA === tiebreakGamesTo &&
+                set.gamesB === tiebreakGamesTo - 1) ||
+              (set.gamesA === tiebreakGamesTo - 1 &&
+                set.gamesB === tiebreakGamesTo)
+          ).length;
 
   const pointsA = timeline.filter(
     (event) => event.type === "POINT" && event.player === "A"

@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { initialState } from "../../src/lib/tennis/engine";
-import { Player } from "../../src/lib/tennis/types";
+import { createMatch } from "../../src/lib/scoring/engine";
+import { Format, PlayerRef, Sport } from "../../src/lib/scoring/engine";
 import { getHistoryById } from "../../src/lib/history/historyStorage";
 import { DEFAULT_PRESETS } from "../../src/lib/presets/defaultPresets";
 import {
@@ -24,6 +24,15 @@ import { MatchPreset } from "../../src/lib/presets/types";
 import { MatchConfig, saveMatch } from "../../src/lib/storage/matchStorage";
 import SettingsDrawer from "../../src/components/SettingsDrawer";
 import { ThemeColors, useSettings } from "../../src/components/SettingsProvider";
+
+const createPlayerRef = (
+  name: string,
+  teamId: "A" | "B",
+  index: number
+): PlayerRef => ({
+  userId: `${teamId}-${index}`,
+  name: name.trim() || `${teamId}${index}`
+});
 
 const buildPresetSubtitle = (preset: MatchPreset): string => {
   if (preset.rules.superTiebreakOnly) {
@@ -47,14 +56,18 @@ export default function SetupMatch() {
     rematchId?: string | string[];
     presetId?: string | string[];
   }>();
-  const [playerAName, setPlayerAName] = useState("Player A");
-  const [playerBName, setPlayerBName] = useState("Player B");
+  const [sport, setSport] = useState<Sport>("tennis");
+  const [format, setFormat] = useState<Format>("singles");
+  const [playerA1Name, setPlayerA1Name] = useState("Player A");
+  const [playerA2Name, setPlayerA2Name] = useState("Player A2");
+  const [playerB1Name, setPlayerB1Name] = useState("Player B");
+  const [playerB2Name, setPlayerB2Name] = useState("Player B2");
   const [bestOf, setBestOf] = useState<1 | 3 | 5>(3);
   const [tiebreakAt6All, setTiebreakAt6All] = useState(true);
   const [tiebreakTo, setTiebreakTo] = useState<7 | 10>(7);
   const [superTiebreakOnly, setSuperTiebreakOnly] = useState(false);
   const [shortSetTo, setShortSetTo] = useState<number | undefined>();
-  const [startingServer, setStartingServer] = useState<Player>("A");
+  const [startingServerUserId, setStartingServerUserId] = useState("A-1");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<MatchPreset | null>(
     null
@@ -71,7 +84,9 @@ export default function SetupMatch() {
     setTiebreakTo(preset.rules.tiebreakTo ?? 7);
     setSuperTiebreakOnly(Boolean(preset.rules.superTiebreakOnly));
     setShortSetTo(preset.rules.shortSetTo);
-    setStartingServer(preset.rules.startingServer ?? "A");
+    setStartingServerUserId(
+      preset.rules.startingServer === "B" ? "B-1" : "A-1"
+    );
   };
 
   useEffect(() => {
@@ -87,8 +102,10 @@ export default function SetupMatch() {
       return;
     }
     setSelectedPreset(null);
-    setPlayerAName(record.players.playerAName);
-    setPlayerBName(record.players.playerBName);
+    setSport("tennis");
+    setFormat("singles");
+    setPlayerA1Name(record.players.playerAName);
+    setPlayerB1Name(record.players.playerBName);
     setBestOf(record.bestOf);
     setTiebreakAt6All(record.tiebreakRule === "TIEBREAK_AT_6_ALL");
     setTiebreakTo(record.tiebreakTo ?? 7);
@@ -111,31 +128,75 @@ export default function SetupMatch() {
       (item) => item.id === presetId
     );
     if (preset) {
+      setSport("tennis");
+      setFormat("singles");
       applyPreset(preset);
     }
   }, [params.presetId, params.rematchId]);
 
+  const serverOptions = useMemo(() => {
+    const options = [
+      { id: "A-1", label: playerA1Name.trim() || "Player A" },
+      { id: "B-1", label: playerB1Name.trim() || "Player B" }
+    ];
+    if (format === "doubles") {
+      options.splice(1, 0, {
+        id: "A-2",
+        label: playerA2Name.trim() || "Player A2"
+      });
+      options.push({
+        id: "B-2",
+        label: playerB2Name.trim() || "Player B2"
+      });
+    }
+    return options;
+  }, [format, playerA1Name, playerA2Name, playerB1Name, playerB2Name]);
+
+  useEffect(() => {
+    if (sport === "badminton") {
+      return;
+    }
+    if (!serverOptions.some((option) => option.id === startingServerUserId)) {
+      setStartingServerUserId(serverOptions[0]?.id ?? "A-1");
+    }
+  }, [serverOptions, sport, startingServerUserId]);
+
+  useEffect(() => {
+    if (sport === "badminton") {
+      setStartingServerUserId("A-1");
+    }
+  }, [sport]);
+
   const handleStartMatch = () => {
+    const teamAPlayers: PlayerRef[] = [
+      createPlayerRef(playerA1Name, "A", 1)
+    ];
+    const teamBPlayers: PlayerRef[] = [
+      createPlayerRef(playerB1Name, "B", 1)
+    ];
+    if (format === "doubles") {
+      teamAPlayers.push(createPlayerRef(playerA2Name, "A", 2));
+      teamBPlayers.push(createPlayerRef(playerB2Name, "B", 2));
+    }
+    const teamA = { id: "A" as const, players: teamAPlayers };
+    const teamB = { id: "B" as const, players: teamBPlayers };
     const config: MatchConfig = {
-      playerAName: playerAName.trim() || "Player A",
-      playerBName: playerBName.trim() || "Player B",
-      bestOf,
+      sport,
+      format,
+      teamA,
+      teamB,
+      bestOf: sport === "badminton" ? undefined : bestOf,
+      tiebreakAt: sport === "badminton" ? undefined : tiebreakAt6All ? 6 : undefined,
       tiebreakAt6All,
-      tiebreakTo,
-      superTiebreakOnly,
-      shortSetTo,
-      startingServer,
+      tiebreakTo: sport === "badminton" ? undefined : tiebreakTo,
+      superTiebreakOnly: sport === "badminton" ? undefined : superTiebreakOnly,
+      shortSetTo: sport === "badminton" ? undefined : shortSetTo,
+      startingServerUserId:
+        sport === "badminton" ? undefined : startingServerUserId,
       startTime: Date.now()
     };
-    const tennisState = initialState({
-      bestOf: config.bestOf,
-      tiebreakAt6All: config.tiebreakAt6All,
-      tiebreakTo: config.tiebreakTo,
-      superTiebreakOnly: config.superTiebreakOnly,
-      shortSetTo: config.shortSetTo,
-      startingServer: config.startingServer
-    });
-    saveMatch({ config, tennisState, history: [], timeline: [] });
+    const matchState = createMatch(config, teamA, teamB);
+    saveMatch({ config, matchState, history: [], timeline: [] });
     router.push("/match");
   };
 
@@ -155,7 +216,7 @@ export default function SetupMatch() {
           </TouchableOpacity>
         </View>
 
-        {selectedPreset ? (
+        {selectedPreset && sport !== "badminton" ? (
           <View style={styles.presetBadge}>
             <Text style={styles.presetBadgeText}>
               Preset: {selectedPreset.title}
@@ -164,265 +225,352 @@ export default function SetupMatch() {
         ) : null}
 
         <View style={styles.section}>
-          <Text style={styles.label}>Player A Name</Text>
+          <Text style={styles.label}>Sport</Text>
+          <View style={styles.toggleRow}>
+            {(["tennis", "padel", "badminton"] as Sport[]).map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.toggleButton,
+                  sport === item && styles.toggleButtonActive
+                ]}
+                onPress={() => {
+                  setSport(item);
+                  if (item === "badminton") {
+                    setSelectedPreset(null);
+                    setSuperTiebreakOnly(false);
+                  }
+                }}
+              >
+                <Text
+                  style={[
+                    styles.toggleText,
+                    sport === item && styles.toggleTextActive
+                  ]}
+                >
+                  {item.charAt(0).toUpperCase() + item.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Format</Text>
+          <View style={styles.toggleRow}>
+            {(["singles", "doubles"] as Format[]).map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.toggleButton,
+                  format === item && styles.toggleButtonActive
+                ]}
+                onPress={() => setFormat(item)}
+              >
+                <Text
+                  style={[
+                    styles.toggleText,
+                    format === item && styles.toggleTextActive
+                  ]}
+                >
+                  {item === "singles" ? "Singles" : "Doubles"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Team A</Text>
           <TextInput
             style={styles.input}
-            value={playerAName}
-            onChangeText={setPlayerAName}
+            value={playerA1Name}
+            onChangeText={setPlayerA1Name}
             placeholder="Player A"
             placeholderTextColor={colors.muted}
           />
+          {format === "doubles" ? (
+            <TextInput
+              style={[styles.input, styles.inputStacked]}
+              value={playerA2Name}
+              onChangeText={setPlayerA2Name}
+              placeholder="Player A2"
+              placeholderTextColor={colors.muted}
+            />
+          ) : null}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Player B Name</Text>
+          <Text style={styles.label}>Team B</Text>
           <TextInput
             style={styles.input}
-            value={playerBName}
-            onChangeText={setPlayerBName}
+            value={playerB1Name}
+            onChangeText={setPlayerB1Name}
             placeholder="Player B"
             placeholderTextColor={colors.muted}
           />
+          {format === "doubles" ? (
+            <TextInput
+              style={[styles.input, styles.inputStacked]}
+              value={playerB2Name}
+              onChangeText={setPlayerB2Name}
+              placeholder="Player B2"
+              placeholderTextColor={colors.muted}
+            />
+          ) : null}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Match Format</Text>
-          <View style={styles.toggleRow}>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              bestOf === 1 && styles.toggleButtonActive,
-              superTiebreakOnly && styles.toggleButtonDisabled
-            ]}
-            onPress={() => {
-              if (!superTiebreakOnly) {
-                setBestOf(1);
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                bestOf === 1 && styles.toggleTextActive,
-                superTiebreakOnly && styles.toggleTextDisabled
-              ]}
-            >
-              Single set
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              bestOf === 3 && styles.toggleButtonActive,
-              superTiebreakOnly && styles.toggleButtonDisabled
-            ]}
-            onPress={() => {
-              if (!superTiebreakOnly) {
-                setBestOf(3);
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                bestOf === 3 && styles.toggleTextActive,
-                superTiebreakOnly && styles.toggleTextDisabled
-              ]}
-            >
-              Best of 3
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              bestOf === 5 && styles.toggleButtonActive,
-              superTiebreakOnly && styles.toggleButtonDisabled
-            ]}
-            onPress={() => {
-              if (!superTiebreakOnly) {
-                setBestOf(5);
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                bestOf === 5 && styles.toggleTextActive,
-                superTiebreakOnly && styles.toggleTextDisabled
-              ]}
-            >
-              Best of 5
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Super tie-break only</Text>
-          <Switch
-            value={superTiebreakOnly}
-            onValueChange={(value) => {
-              setSuperTiebreakOnly(value);
-              if (value) {
-                setBestOf(1);
-                setTiebreakAt6All(true);
-                setTiebreakTo(10);
-                setShortSetTo(undefined);
-              } else {
-                setTiebreakTo(7);
-              }
-            }}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={colors.surface}
-          />
-        </View>
-        <Text style={styles.helperText}>
-          Toggle on for a single match tie-break to {tiebreakTo} points (win by
-          2).
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Short set (first to 4 games)</Text>
-          <Switch
-            value={Boolean(shortSetTo)}
-            onValueChange={(value) => {
-              setShortSetTo(value ? 4 : undefined);
-              if (value) {
-                setSuperTiebreakOnly(false);
-              }
-            }}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={colors.surface}
-          />
-        </View>
-        <Text style={styles.helperText}>
-          Great for warm-ups and practice reps.
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Tie-break at 6–6</Text>
-          <Switch
-            value={tiebreakAt6All}
-            onValueChange={setTiebreakAt6All}
-            disabled={superTiebreakOnly}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={colors.surface}
-          />
-        </View>
-      </View>
-
-      {(tiebreakAt6All || superTiebreakOnly) && (
-        <View style={styles.section}>
-          <Text style={styles.label}>Tie-break target</Text>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                tiebreakTo === 7 && styles.toggleButtonActive
-              ]}
-              onPress={() => setTiebreakTo(7)}
-            >
-              <Text
+        {sport !== "badminton" ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>Match Format</Text>
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
                 style={[
-                  styles.toggleText,
-                  tiebreakTo === 7 && styles.toggleTextActive
+                  styles.toggleButton,
+                  bestOf === 1 && styles.toggleButtonActive,
+                  superTiebreakOnly && styles.toggleButtonDisabled
                 ]}
+                onPress={() => {
+                  if (!superTiebreakOnly) {
+                    setBestOf(1);
+                  }
+                }}
               >
-                First to 7
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                tiebreakTo === 10 && styles.toggleButtonActive
-              ]}
-              onPress={() => setTiebreakTo(10)}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.toggleText,
+                    bestOf === 1 && styles.toggleTextActive,
+                    superTiebreakOnly && styles.toggleTextDisabled
+                  ]}
+                >
+                  Single set
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.toggleText,
-                  tiebreakTo === 10 && styles.toggleTextActive
+                  styles.toggleButton,
+                  bestOf === 3 && styles.toggleButtonActive,
+                  superTiebreakOnly && styles.toggleButtonDisabled
                 ]}
+                onPress={() => {
+                  if (!superTiebreakOnly) {
+                    setBestOf(3);
+                  }
+                }}
               >
-                First to 10
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    bestOf === 3 && styles.toggleTextActive,
+                    superTiebreakOnly && styles.toggleTextDisabled
+                  ]}
+                >
+                  Best of 3
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  bestOf === 5 && styles.toggleButtonActive,
+                  superTiebreakOnly && styles.toggleButtonDisabled
+                ]}
+                onPress={() => {
+                  if (!superTiebreakOnly) {
+                    setBestOf(5);
+                  }
+                }}
+              >
+                <Text
+                  style={[
+                    styles.toggleText,
+                    bestOf === 5 && styles.toggleTextActive,
+                    superTiebreakOnly && styles.toggleTextDisabled
+                  ]}
+                >
+                  Best of 5
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.helperText}>
+              Badminton uses rally scoring to 21 (win by 2, cap at 30).
+            </Text>
+          </View>
+        )}
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Starting Server</Text>
-        <View style={styles.toggleRow}>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              startingServer === "A" && styles.toggleButtonActive
-            ]}
-            onPress={() => setStartingServer("A")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                startingServer === "A" && styles.toggleTextActive
-              ]}
-            >
-              {playerAName.trim() || "Player A"}
+      {sport !== "badminton" ? (
+        <>
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Super tie-break only</Text>
+              <Switch
+                value={superTiebreakOnly}
+                onValueChange={(value) => {
+                  setSuperTiebreakOnly(value);
+                  if (value) {
+                    setBestOf(1);
+                    setTiebreakAt6All(true);
+                    setTiebreakTo(10);
+                    setShortSetTo(undefined);
+                  } else {
+                    setTiebreakTo(7);
+                  }
+                }}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.surface}
+              />
+            </View>
+            <Text style={styles.helperText}>
+              Toggle on for a single match tie-break to {tiebreakTo} points (win
+              by 2).
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              startingServer === "B" && styles.toggleButtonActive
-            ]}
-            onPress={() => setStartingServer("B")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                startingServer === "B" && styles.toggleTextActive
-              ]}
-            >
-              {playerBName.trim() || "Player B"}
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Short set (first to 4 games)</Text>
+              <Switch
+                value={Boolean(shortSetTo)}
+                onValueChange={(value) => {
+                  setShortSetTo(value ? 4 : undefined);
+                  if (value) {
+                    setSuperTiebreakOnly(false);
+                  }
+                }}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.surface}
+              />
+            </View>
+            <Text style={styles.helperText}>
+              Great for warm-ups and practice reps.
             </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Tie-break at 6–6</Text>
+              <Switch
+                value={tiebreakAt6All}
+                onValueChange={setTiebreakAt6All}
+                disabled={superTiebreakOnly}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.surface}
+              />
+            </View>
+          </View>
+
+          {(tiebreakAt6All || superTiebreakOnly) && (
+            <View style={styles.section}>
+              <Text style={styles.label}>Tie-break target</Text>
+              <View style={styles.toggleRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleButton,
+                    tiebreakTo === 7 && styles.toggleButtonActive
+                  ]}
+                  onPress={() => setTiebreakTo(7)}
+                >
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      tiebreakTo === 7 && styles.toggleTextActive
+                    ]}
+                  >
+                    First to 7
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleButton,
+                    tiebreakTo === 10 && styles.toggleButtonActive
+                  ]}
+                  onPress={() => setTiebreakTo(10)}
+                >
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      tiebreakTo === 10 && styles.toggleTextActive
+                    ]}
+                  >
+                    First to 10
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Starting Server</Text>
+            <View style={styles.toggleRow}>
+              {serverOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.toggleButton,
+                    startingServerUserId === option.id &&
+                      styles.toggleButtonActive
+                  ]}
+                  onPress={() => setStartingServerUserId(option.id)}
+                >
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      startingServerUserId === option.id &&
+                        styles.toggleTextActive
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </>
+      ) : null}
 
       <TouchableOpacity style={styles.startButton} onPress={handleStartMatch}>
         <Text style={styles.startButtonText}>Start Match</Text>
       </TouchableOpacity>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Save as new preset</Text>
-        <TextInput
-          style={styles.input}
-          value={presetName}
-          onChangeText={setPresetName}
-          placeholder="Preset name"
-          placeholderTextColor={colors.muted}
-        />
-        <View style={styles.presetActions}>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => {
-              const name = presetName.trim();
-              if (!name) {
-                Alert.alert("Name required", "Add a preset name to save.");
-                return;
-              }
-              const preset: MatchPreset = {
-                id: `custom-${Date.now()}`,
-                title: name,
-                subtitle: buildPresetSubtitle({
-                  id: "custom",
+      {sport !== "badminton" ? (
+        <View style={styles.section}>
+          <Text style={styles.label}>Save as new preset</Text>
+          <TextInput
+            style={styles.input}
+            value={presetName}
+            onChangeText={setPresetName}
+            placeholder="Preset name"
+            placeholderTextColor={colors.muted}
+          />
+          <View style={styles.presetActions}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => {
+                const name = presetName.trim();
+                if (!name) {
+                  Alert.alert("Name required", "Add a preset name to save.");
+                  return;
+                }
+                const startingServer =
+                  startingServerUserId.startsWith("B") ? "B" : "A";
+                const preset: MatchPreset = {
+                  id: `custom-${Date.now()}`,
                   title: name,
-                  subtitle: "",
+                  subtitle: buildPresetSubtitle({
+                    id: "custom",
+                    title: name,
+                    subtitle: "",
+                    rules: {
+                      bestOf,
+                      tiebreakAt6All,
+                      tiebreakTo,
+                      superTiebreakOnly,
+                      shortSetTo,
+                      startingServer
+                    }
+                  }),
                   rules: {
                     bestOf,
                     tiebreakAt6All,
@@ -431,47 +579,39 @@ export default function SetupMatch() {
                     shortSetTo,
                     startingServer
                   }
-                }),
-                rules: {
-                  bestOf,
-                  tiebreakAt6All,
-                  tiebreakTo,
-                  superTiebreakOnly,
-                  shortSetTo,
-                  startingServer
+                };
+                const nextPresets = [...customPresets, preset];
+                saveCustomPresets(nextPresets);
+                setCustomPresets(nextPresets);
+                setSelectedPreset(preset);
+                setPresetName("");
+                Alert.alert(
+                  "Preset saved",
+                  "Your new preset is ready in Quick Presets."
+                );
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Save preset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.ghostButton}
+              onPress={() => {
+                clearCustomPresets();
+                setCustomPresets([]);
+                if (
+                  selectedPreset &&
+                  !DEFAULT_PRESETS.some((preset) => preset.id === selectedPreset.id)
+                ) {
+                  setSelectedPreset(null);
                 }
-              };
-              const nextPresets = [...customPresets, preset];
-              saveCustomPresets(nextPresets);
-              setCustomPresets(nextPresets);
-              setSelectedPreset(preset);
-              setPresetName("");
-              Alert.alert(
-                "Preset saved",
-                "Your new preset is ready in Quick Presets."
-              );
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Save preset</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.ghostButton}
-            onPress={() => {
-              clearCustomPresets();
-              setCustomPresets([]);
-              if (
-                selectedPreset &&
-                !DEFAULT_PRESETS.some((preset) => preset.id === selectedPreset.id)
-              ) {
-                setSelectedPreset(null);
-              }
-              Alert.alert("Presets reset", "Custom presets cleared.");
-            }}
-          >
-            <Text style={styles.ghostButtonText}>Reset to default presets</Text>
-          </TouchableOpacity>
+                Alert.alert("Presets reset", "Custom presets cleared.");
+              }}
+            >
+              <Text style={styles.ghostButtonText}>Reset to default presets</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      ) : null}
       </ScrollView>
       <SettingsDrawer
         visible={settingsOpen}
@@ -550,9 +690,13 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.border
     },
+    inputStacked: {
+      marginTop: 10
+    },
     toggleRow: {
       flexDirection: "row",
-      gap: 12
+      gap: 12,
+      flexWrap: "wrap"
     },
     toggleButton: {
       flex: 1,

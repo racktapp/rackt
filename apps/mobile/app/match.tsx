@@ -11,8 +11,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { reset } from "../src/lib/tennis/engine";
-import { Player, TennisState } from "../src/lib/tennis/types";
+import {
+  getDisplayScore,
+  getServer,
+  resetMatch
+} from "../src/lib/scoring/engine";
+import { MatchState } from "../src/lib/scoring/engine";
 import {
   clearMatch,
   loadMatch,
@@ -36,47 +40,10 @@ import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
 import { triggerHaptics } from "../src/lib/feedback/haptics";
 import { playSound } from "../src/lib/feedback/sound";
 
-const pointLabel = (points: number): string => {
-  switch (points) {
-    case 0:
-      return "0";
-    case 1:
-      return "15";
-    case 2:
-      return "30";
-    case 3:
-      return "40";
-    default:
-      return "40";
-  }
+const formatTeamName = (config: MatchConfig, teamId: "A" | "B") => {
+  const team = teamId === "A" ? config.teamA : config.teamB;
+  return team.players.map((player) => player.name).join(" / ");
 };
-
-const pointDisplay = (state: TennisState, player: Player): string => {
-  const ownPoints = player === "A" ? state.gamePointsA : state.gamePointsB;
-  const opponentPoints = player === "A" ? state.gamePointsB : state.gamePointsA;
-  if (ownPoints >= 3 && opponentPoints >= 3) {
-    if (ownPoints === opponentPoints) {
-      return "40";
-    }
-    return ownPoints > opponentPoints ? "Ad" : "40";
-  }
-  return pointLabel(ownPoints);
-};
-
-const gameScoreLabel = (state: TennisState): string => {
-  const { gamePointsA, gamePointsB, server } = state;
-  if (gamePointsA >= 3 && gamePointsB >= 3) {
-    if (gamePointsA === gamePointsB) {
-      return "Deuce";
-    }
-    const leader = gamePointsA > gamePointsB ? "A" : "B";
-    return leader === server ? "Ad In" : "Ad Out";
-  }
-  return `${pointLabel(gamePointsA)}–${pointLabel(gamePointsB)}`;
-};
-
-const serverLabel = (server: Player, config: MatchConfig): string =>
-  server === "A" ? config.playerAName : config.playerBName;
 
 const useScorePulse = (value: string | number) => {
   const animation = useRef(new Animated.Value(0)).current;
@@ -128,8 +95,8 @@ export default function MatchScreen() {
   const router = useRouter();
   const { settings, colors } = useSettings();
   const [config, setConfig] = useState<MatchConfig | null>(null);
-  const [state, setState] = useState<TennisState | null>(null);
-  const [history, setHistory] = useState<TennisState[]>([]);
+  const [state, setState] = useState<MatchState | null>(null);
+  const [history, setHistory] = useState<MatchState[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [inputEnabled, setInputEnabled] = useState(true);
   const [controllerExpanded, setControllerExpanded] = useState(false);
@@ -162,7 +129,7 @@ export default function MatchScreen() {
       return;
     }
     setConfig(stored.config);
-    setState(stored.tennisState);
+    setState(stored.matchState);
     setHistory(stored.history);
     setTimeline(stored.timeline ?? []);
   }, [router]);
@@ -171,11 +138,11 @@ export default function MatchScreen() {
     if (!config || !state) {
       return;
     }
-    saveMatch({ config, tennisState: state, history, timeline });
+    saveMatch({ config, matchState: state, history, timeline });
   }, [config, history, state, timeline]);
 
   useEffect(() => {
-    if (!state?.matchWinner) {
+    if (!state?.score.matchWinner) {
       return;
     }
     if (hasAutoNavigated.current) {
@@ -183,47 +150,63 @@ export default function MatchScreen() {
     }
     hasAutoNavigated.current = true;
     router.replace("/summary");
-  }, [router, state?.matchWinner]);
+  }, [router, state?.score.matchWinner]);
 
   const currentSet = useMemo(() => {
-    if (!state) {
+    if (!state || state.score.sport === "badminton") {
       return null;
     }
-    return state.sets[state.currentSet];
+    return state.score.sets[state.score.currentSet];
   }, [state]);
 
   const matchStatus = useMemo(() => {
-    if (!state || !config || !currentSet) {
+    if (!state || !config) {
       return "";
     }
-    if (state.matchWinner) {
+    if (state.score.matchWinner) {
       return `Match won by ${
-        state.matchWinner === "A"
-          ? config.playerAName
-          : config.playerBName
+        state.score.matchWinner === "A"
+          ? formatTeamName(config, "A")
+          : formatTeamName(config, "B")
       }`;
     }
-    if (state.isTiebreak) {
-      const label = config.superTiebreakOnly ? "Match tie-break" : "Tie-break";
-      return `${label} • ${state.tiebreakPointsA}–${state.tiebreakPointsB}`;
+    if (state.score.sport === "badminton") {
+      const currentGame = state.score.games[state.score.currentGame];
+      return `Game ${state.score.currentGame + 1} • ${currentGame?.pointsA ?? 0}–${
+        currentGame?.pointsB ?? 0
+      }`;
     }
-    const setScore = `${currentSet.gamesA}–${currentSet.gamesB}`;
-    return `Set ${state.currentSet + 1} • ${setScore} • ${gameScoreLabel(
-      state
-    )}`;
+    if (state.score.isTiebreak) {
+      const label = config.superTiebreakOnly ? "Match tie-break" : "Tie-break";
+      return `${label} • ${state.score.tiebreakPointsA}–${state.score.tiebreakPointsB}`;
+    }
+    const setScore = `${currentSet?.gamesA ?? 0}–${currentSet?.gamesB ?? 0}`;
+    const display = getDisplayScore(state);
+    const gameScoreLabel =
+      display.sport === "badminton"
+        ? ""
+        : display.isTiebreak
+          ? `${display.tiebreakPointsA}–${display.tiebreakPointsB}`
+          : `${display.pointLabelA}–${display.pointLabelB}`;
+    return `Set ${state.score.currentSet + 1} • ${setScore} • ${gameScoreLabel}`;
   }, [config, currentSet, state]);
 
   const rulesLabel = useMemo(() => {
     if (!config) {
       return "";
     }
+    if (config.sport === "badminton") {
+      return `Best of ${config.gamesToWin ?? 2} • First to ${
+        config.pointsToWinGame ?? 21
+      }`;
+    }
     if (config.superTiebreakOnly) {
       return `Match tie-break to ${config.tiebreakTo}`;
     }
     const setLabel = config.shortSetTo
       ? `First to ${config.shortSetTo} games`
-      : `Best of ${config.bestOf}`;
-    const tiebreakLabel = config.tiebreakAt6All
+      : `Best of ${config.bestOf ?? 3}`;
+    const tiebreakLabel = (config.tiebreakAt ?? 6) === 6
       ? `TB to ${config.tiebreakTo}`
       : "No TB";
     return `${setLabel} • ${tiebreakLabel}`;
@@ -234,26 +217,35 @@ export default function MatchScreen() {
     [config, state]
   );
 
-  const gamesAValue = currentSet?.gamesA ?? 0;
-  const gamesBValue = currentSet?.gamesB ?? 0;
-  const pointsAValue = state?.isTiebreak
-    ? state.tiebreakPointsA
-    : state?.gamePointsA ?? 0;
-  const pointsBValue = state?.isTiebreak
-    ? state.tiebreakPointsB
-    : state?.gamePointsB ?? 0;
+  const displayScore = state ? getDisplayScore(state) : null;
+  const gamesAValue =
+    displayScore?.sport === "badminton"
+      ? displayScore.gamesWonA
+      : displayScore?.gamesA ?? 0;
+  const gamesBValue =
+    displayScore?.sport === "badminton"
+      ? displayScore.gamesWonB
+      : displayScore?.gamesB ?? 0;
+  const pointsAValue =
+    displayScore?.sport === "badminton"
+      ? displayScore.pointsA
+      : displayScore?.isTiebreak
+        ? displayScore.tiebreakPointsA
+        : displayScore?.pointsA ?? 0;
+  const pointsBValue =
+    displayScore?.sport === "badminton"
+      ? displayScore.pointsB
+      : displayScore?.isTiebreak
+        ? displayScore.tiebreakPointsB
+        : displayScore?.pointsB ?? 0;
   const pointsALabel =
-    state && state.isTiebreak
+    displayScore?.sport === "badminton"
       ? `${pointsAValue}`
-      : state
-        ? pointDisplay(state, "A")
-        : "0";
+      : displayScore?.pointLabelA ?? "0";
   const pointsBLabel =
-    state && state.isTiebreak
+    displayScore?.sport === "badminton"
       ? `${pointsBValue}`
-      : state
-        ? pointDisplay(state, "B")
-        : "0";
+      : displayScore?.pointLabelB ?? "0";
 
   const gamesAPulse = useScorePulse(gamesAValue);
   const gamesBPulse = useScorePulse(gamesBValue);
@@ -268,16 +260,7 @@ export default function MatchScreen() {
     setConfig((prev) =>
       prev ? { ...prev, startTime: Date.now() } : prev
     );
-    setState(
-      reset({
-        bestOf: config.bestOf,
-        tiebreakAt6All: config.tiebreakAt6All,
-        tiebreakTo: config.tiebreakTo,
-        superTiebreakOnly: config.superTiebreakOnly,
-        shortSetTo: config.shortSetTo,
-        startingServer: config.startingServer
-      })
-    );
+    setState((prev) => (prev ? resetMatch(prev, config) : prev));
     setHistory([]);
     setTimeline([]);
   }, [config, settings]);
@@ -375,11 +358,14 @@ export default function MatchScreen() {
 
   const formatTimelineEvent = useCallback(
     (event: TimelineEvent): string => {
+      if (!config) {
+        return event.label;
+      }
       const playerName =
         event.player === "A"
-          ? config?.playerAName
+          ? formatTeamName(config, "A")
           : event.player === "B"
-            ? config?.playerBName
+            ? formatTeamName(config, "B")
             : undefined;
       switch (event.type) {
         case "POINT":
@@ -407,7 +393,17 @@ export default function MatchScreen() {
     );
   }
 
-  const matchFinished = Boolean(state.matchWinner);
+  const matchFinished = Boolean(state.score.matchWinner);
+  const server = getServer(state);
+  const serverTeamName = formatTeamName(config, server.teamId);
+  const serverPlayer =
+    config[server.teamId === "A" ? "teamA" : "teamB"].players.find(
+      (player) => player.userId === server.playerUserId
+    );
+  const isBadminton = config.sport === "badminton";
+  const serverLabel = isBadminton
+    ? serverTeamName
+    : serverPlayer?.name ?? serverTeamName;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -442,7 +438,7 @@ export default function MatchScreen() {
           <View style={styles.servingLine}>
             <View style={styles.servingDot} />
             <Text style={styles.serverLine}>
-              Serving {serverLabel(state.server, config)}
+              Serving {serverLabel}
             </Text>
           </View>
         </View>
@@ -453,16 +449,22 @@ export default function MatchScreen() {
               <View
                 style={[
                   styles.serverDot,
-                  state.server === "A"
+                  server.teamId === "A"
                     ? styles.serverDotActive
                     : styles.serverDotInactive
                 ]}
               />
-              <Text style={styles.playerName}>{config.playerAName}</Text>
-              {state.server === "A" ? (
+              <Text style={styles.playerName}>
+                {formatTeamName(config, "A")}
+              </Text>
+              {server.teamId === "A" ? (
                 <View style={styles.servingBadge}>
                   <View style={styles.servingBadgeDot} />
-                  <Text style={styles.servingBadgeText}>Serving</Text>
+                  <Text style={styles.servingBadgeText}>
+                    {isBadminton
+                      ? "Serving"
+                      : `Serving ${serverPlayer?.name ?? ""}`}
+                  </Text>
                 </View>
               ) : null}
               {pressure?.player === "A" ? (
@@ -470,17 +472,20 @@ export default function MatchScreen() {
               ) : null}
             </View>
             <View style={styles.setRow}>
-              {state.sets.map((set, index) => (
-                <View
-                  key={`set-a-${index}`}
-                  style={[
-                    styles.setBox,
-                    index === state.currentSet && styles.setBoxActive
-                  ]}
-                >
-                  <Text style={styles.setBoxText}>{set.gamesA}</Text>
-                </View>
-              ))}
+              {displayScore && displayScore.sport !== "badminton"
+                ? displayScore.sets.map((set, index) => (
+                    <View
+                      key={`set-a-${index}`}
+                      style={[
+                        styles.setBox,
+                        index === displayScore.currentSet &&
+                          styles.setBoxActive
+                      ]}
+                    >
+                      <Text style={styles.setBoxText}>{set.gamesA}</Text>
+                    </View>
+                  ))
+                : null}
             </View>
           </View>
           <View style={styles.scoreRow}>
@@ -499,7 +504,11 @@ export default function MatchScreen() {
             </View>
             <View style={styles.scoreColumn}>
               <Text style={styles.scoreLabel}>
-                {state.isTiebreak ? "TB Points" : "Points"}
+                {displayScore?.sport === "badminton"
+                  ? "Points"
+                  : displayScore?.isTiebreak
+                    ? "TB Points"
+                    : "Points"}
               </Text>
               <Animated.View
                 style={[
@@ -521,16 +530,22 @@ export default function MatchScreen() {
               <View
                 style={[
                   styles.serverDot,
-                  state.server === "B"
+                  server.teamId === "B"
                     ? styles.serverDotActive
                     : styles.serverDotInactive
                 ]}
               />
-              <Text style={styles.playerName}>{config.playerBName}</Text>
-              {state.server === "B" ? (
+              <Text style={styles.playerName}>
+                {formatTeamName(config, "B")}
+              </Text>
+              {server.teamId === "B" ? (
                 <View style={styles.servingBadge}>
                   <View style={styles.servingBadgeDot} />
-                  <Text style={styles.servingBadgeText}>Serving</Text>
+                  <Text style={styles.servingBadgeText}>
+                    {isBadminton
+                      ? "Serving"
+                      : `Serving ${serverPlayer?.name ?? ""}`}
+                  </Text>
                 </View>
               ) : null}
               {pressure?.player === "B" ? (
@@ -538,17 +553,20 @@ export default function MatchScreen() {
               ) : null}
             </View>
             <View style={styles.setRow}>
-              {state.sets.map((set, index) => (
-                <View
-                  key={`set-b-${index}`}
-                  style={[
-                    styles.setBox,
-                    index === state.currentSet && styles.setBoxActive
-                  ]}
-                >
-                  <Text style={styles.setBoxText}>{set.gamesB}</Text>
-                </View>
-              ))}
+              {displayScore && displayScore.sport !== "badminton"
+                ? displayScore.sets.map((set, index) => (
+                    <View
+                      key={`set-b-${index}`}
+                      style={[
+                        styles.setBox,
+                        index === displayScore.currentSet &&
+                          styles.setBoxActive
+                      ]}
+                    >
+                      <Text style={styles.setBoxText}>{set.gamesB}</Text>
+                    </View>
+                  ))
+                : null}
             </View>
           </View>
           <View style={styles.scoreRow}>
@@ -567,7 +585,11 @@ export default function MatchScreen() {
             </View>
             <View style={styles.scoreColumn}>
               <Text style={styles.scoreLabel}>
-                {state.isTiebreak ? "TB Points" : "Points"}
+                {displayScore?.sport === "badminton"
+                  ? "Points"
+                  : displayScore?.isTiebreak
+                    ? "TB Points"
+                    : "Points"}
               </Text>
               <Animated.View
                 style={[
@@ -704,7 +726,7 @@ export default function MatchScreen() {
               <Text
                 style={[styles.actionButtonText, styles.actionButtonTextLight]}
               >
-                Point {config.playerAName}
+                Point {formatTeamName(config, "A")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -720,7 +742,7 @@ export default function MatchScreen() {
               <Text
                 style={[styles.actionButtonText, styles.actionButtonTextLight]}
               >
-                Point {config.playerBName}
+                Point {formatTeamName(config, "B")}
               </Text>
             </TouchableOpacity>
           </>

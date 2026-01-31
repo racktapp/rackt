@@ -1,4 +1,4 @@
-import { Player } from "../tennis/types";
+import { TeamId } from "../scoring/engine";
 
 export type MatchPresetRules = {
   bestOf: 1 | 3 | 5;
@@ -6,7 +6,7 @@ export type MatchPresetRules = {
   tiebreakTo?: 7 | 10;
   superTiebreakOnly?: boolean;
   shortSetTo?: number;
-  startingServer?: Player;
+  startingServer?: TeamId;
 };
 
 export type MatchPreset = {
