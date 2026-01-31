@@ -10,8 +10,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { User } from "@supabase/supabase-js";
 
-import { supabase } from "../lib/supabase";
-import { ThemeColors, useSettings } from "../src/components/SettingsProvider";
+import { supabase } from "../../lib/supabase";
+import { ThemeColors, useSettings } from "../../src/components/SettingsProvider";
 
 type ProfileRow = {
   id: string;
