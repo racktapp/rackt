@@ -65,6 +65,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="feed"
+        options={{
+          title: "Feed"
+        }}
+      />
+      <Tabs.Screen
         name="friends"
         options={{
           title: "Friends"
