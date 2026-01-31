@@ -57,6 +57,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="leaderboards"
+        options={{
+          title: "Leaderboards"
+        }}
+      />
+      <Tabs.Screen
         name="friends"
         options={{
           title: "Friends"
