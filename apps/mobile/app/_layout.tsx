@@ -6,7 +6,8 @@ export default function RootLayout() {
   return (
     <SettingsProvider>
       <PushNotificationManager />
-      <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
+      <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
+        <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="leaderboards/create" />
         <Stack.Screen name="leaderboards/[leaderboardId]" />
