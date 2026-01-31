@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="match" />
         <Stack.Screen name="summary" />
         <Stack.Screen name="history/[id]" />
+        <Stack.Screen name="profile/[id]" />
       </Stack>
     </SettingsProvider>
   );
