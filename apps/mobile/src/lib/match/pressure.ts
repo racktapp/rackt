@@ -1,25 +1,27 @@
 import { MatchConfig } from "../storage/matchStorage";
-import { pointWonBy } from "../tennis/engine";
+import { pointWonBy } from "../scoring/engine";
 import { getSetWinner } from "../tennis/rules";
-import { Player, TennisState } from "../tennis/types";
+import { MatchState, TeamId } from "../scoring/engine";
 
 export type PressureType = "MATCH_POINT" | "SET_POINT" | "BREAK_POINT";
 
 export type PressureIndicator = {
-  player: Player;
+  player: TeamId;
   type: PressureType;
 };
 
-export const isTieBreak = (state: TennisState): boolean => state.isTiebreak;
+export const isTieBreak = (state: MatchState): boolean =>
+  state.score.sport !== "badminton" && state.score.isTiebreak;
 
 const countSetsWon = (
-  sets: TennisState["sets"],
+  sets: MatchState["score"] extends { sets: infer T } ? T : never,
   config: MatchConfig
 ) => {
   return sets.reduce(
     (acc, set) => {
       const winner = getSetWinner(set.gamesA, set.gamesB, {
-        tiebreakAt6All: config.tiebreakAt6All,
+        tiebreakAt6All:
+          config.tiebreakAt6All ?? (config.tiebreakAt ?? 6) === 6,
         shortSetTo: config.shortSetTo
       });
       if (winner === "A") {
@@ -35,58 +37,76 @@ const countSetsWon = (
 };
 
 export const nextPointWinsGame = (
-  state: TennisState,
-  player: Player
+  state: MatchState,
+  player: TeamId
 ): boolean => {
-  if (isTieBreak(state)) {
+  if (state.score.sport === "badminton" || isTieBreak(state)) {
     return false;
   }
   const nextState = pointWonBy(state, player);
-  const prevSet = state.sets[state.currentSet];
-  const nextSet = nextState.sets[state.currentSet] ?? prevSet;
+  const prevSet = state.score.sets[state.score.currentSet];
+  const nextSet = nextState.score.sets[state.score.currentSet] ?? prevSet;
   const prevGames = player === "A" ? prevSet.gamesA : prevSet.gamesB;
   const nextGames = player === "A" ? nextSet.gamesA : nextSet.gamesB;
   return nextGames > prevGames;
 };
 
 export const nextPointWinsSet = (
-  state: TennisState,
-  player: Player,
+  state: MatchState,
+  player: TeamId,
   config: MatchConfig
 ): boolean => {
+  if (state.score.sport === "badminton") {
+    return false;
+  }
   const nextState = pointWonBy(state, player);
-  const prevWins = countSetsWon(state.sets, config);
-  const nextWins = countSetsWon(nextState.sets, config);
+  const prevWins = countSetsWon(state.score.sets, config);
+  const nextWins = countSetsWon(nextState.score.sets, config);
   return player === "A"
     ? nextWins.winsA > prevWins.winsA
     : nextWins.winsB > prevWins.winsB;
 };
 
 export const nextPointWinsMatch = (
-  state: TennisState,
-  player: Player,
+  state: MatchState,
+  player: TeamId,
   config: MatchConfig
 ): boolean => {
   const nextState = pointWonBy(state, player);
-  if (nextState.matchWinner === player) {
+  if (nextState.score.matchWinner === player) {
     return true;
   }
-  const neededSets = Math.ceil(config.bestOf / 2);
-  const nextWins = countSetsWon(nextState.sets, config);
+  if (state.score.sport === "badminton") {
+    const neededGames = config.gamesToWin ?? 2;
+    const gamesWonA = nextState.score.games.filter(
+      (game) => game.pointsA > game.pointsB
+    ).length;
+    const gamesWonB = nextState.score.games.filter(
+      (game) => game.pointsB > game.pointsA
+    ).length;
+    return player === "A"
+      ? gamesWonA >= neededGames
+      : gamesWonB >= neededGames;
+  }
+  const neededSets = Math.ceil((config.bestOf ?? 3) / 2);
+  const nextWins = countSetsWon(nextState.score.sets, config);
   return player === "A"
     ? nextWins.winsA >= neededSets
     : nextWins.winsB >= neededSets;
 };
 
 export const getPressure = (
-  state: TennisState,
+  state: MatchState,
   config: MatchConfig
 ): PressureIndicator | null => {
-  if (state.matchWinner) {
+  if (state.score.sport === "badminton") {
+    return null;
+  }
+  if (state.score.matchWinner) {
     return null;
   }
 
-  const players: Player[] = ["A", "B"];
+  const players: TeamId[] = ["A", "B"];
 
   for (const player of players) {
     if (nextPointWinsMatch(state, player, config)) {
@@ -101,7 +121,11 @@ export const getPressure = (
   }
 
   for (const player of players) {
-    if (nextPointWinsGame(state, player) && state.server !== player) {
+    if (
+      nextPointWinsGame(state, player) &&
+      state.server.type !== "badminton" &&
+      state.server.order[state.server.index]?.teamId !== player
+    ) {
       return { player, type: "BREAK_POINT" };
     }
   }

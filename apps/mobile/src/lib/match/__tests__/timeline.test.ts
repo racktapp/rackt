@@ -1,27 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
-import { pointWonBy } from "../../tennis/engine";
-import { TennisState } from "../../tennis/types";
+import { createMatch, pointWonBy } from "../../scoring/engine";
+import { MatchState } from "../../scoring/engine";
 import {
   applyTimelineUpdate,
   deriveTimelineEvent
 } from "../timeline";
 
-const createState = (overrides: Partial<TennisState> = {}): TennisState => ({
-  bestOf: 3,
-  tiebreakAt6All: true,
-  tiebreakTo: 7,
-  superTiebreakOnly: false,
-  shortSetTo: undefined,
-  sets: [{ gamesA: 0, gamesB: 0 }],
-  currentSet: 0,
-  gamePointsA: 0,
-  gamePointsB: 0,
-  isTiebreak: false,
-  tiebreakPointsA: 0,
-  tiebreakPointsB: 0,
-  server: "A",
-  ...overrides
-});
+const createState = (
+  overrides: Partial<MatchState["score"]> = {}
+): MatchState => {
+  const base = createMatch(
+    { sport: "tennis", format: "singles" },
+    { id: "A", players: [{ userId: "A-1", name: "Player A" }] },
+    { id: "B", players: [{ userId: "B-1", name: "Player B" }] }
+  );
+  return {
+    ...base,
+    score: { ...base.score, ...overrides }
+  };
+};
 
 describe("deriveTimelineEvent", () => {
   it("creates a point event when a point is won", () => {

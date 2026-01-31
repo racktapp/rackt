@@ -9,7 +9,9 @@ export default function TabsLayout() {
 
   const refreshActiveMatch = useCallback(() => {
     const stored = loadMatch();
-    setHasActiveMatch(Boolean(stored && !stored.tennisState.matchWinner));
+    setHasActiveMatch(
+      Boolean(stored && !stored.matchState.score.matchWinner)
+    );
   }, []);
 
   useFocusEffect(

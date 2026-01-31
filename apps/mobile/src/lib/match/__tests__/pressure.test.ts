@@ -1,41 +1,37 @@
 import { describe, expect, it } from "vitest";
 import { getPressure } from "../pressure";
 import { MatchConfig } from "../../storage/matchStorage";
-import { TennisState } from "../../tennis/types";
+import { createMatch, MatchState } from "../../scoring/engine";
 
 const baseConfig: MatchConfig = {
-  playerAName: "Antti",
-  playerBName: "Elias",
+  sport: "tennis",
+  format: "singles",
+  teamA: { id: "A", players: [{ userId: "A-1", name: "Antti" }] },
+  teamB: { id: "B", players: [{ userId: "B-1", name: "Elias" }] },
   bestOf: 3,
   tiebreakAt6All: true,
+  tiebreakAt: 6,
   tiebreakTo: 7,
   superTiebreakOnly: false,
   shortSetTo: undefined,
-  startingServer: "A",
   startTime: 1000
 };
 
-const baseState = (overrides: Partial<TennisState> = {}): TennisState => ({
-  bestOf: 3,
-  tiebreakAt6All: true,
-  tiebreakTo: 7,
-  superTiebreakOnly: false,
-  shortSetTo: undefined,
-  sets: [{ gamesA: 0, gamesB: 0 }],
-  currentSet: 0,
-  gamePointsA: 0,
-  gamePointsB: 0,
-  isTiebreak: false,
-  tiebreakPointsA: 0,
-  tiebreakPointsB: 0,
-  server: "A",
-  ...overrides
-});
+const baseState = (
+  overrides: Partial<MatchState["score"]> = {},
+  serverIndex = 0
+): MatchState => {
+  const base = createMatch(baseConfig, baseConfig.teamA, baseConfig.teamB);
+  return {
+    ...base,
+    score: { ...base.score, ...overrides },
+    server: { ...base.server, index: serverIndex }
+  };
+};
 
 describe("getPressure", () => {
   it("detects break point when receiver has game point", () => {
     const state = baseState({
-      server: "A",
       gamePointsA: 2,
       gamePointsB: 3
     });
@@ -50,8 +46,7 @@ describe("getPressure", () => {
     const state = baseState({
       sets: [{ gamesA: 5, gamesB: 3 }],
       gamePointsA: 3,
-      gamePointsB: 2,
-      server: "A"
+      gamePointsB: 2
     });
 
     expect(getPressure(state, baseConfig)).toEqual({
@@ -68,8 +63,7 @@ describe("getPressure", () => {
       ],
       currentSet: 1,
       gamePointsA: 3,
-      gamePointsB: 2,
-      server: "A"
+      gamePointsB: 2
     });
 
     expect(getPressure(state, baseConfig)).toEqual({
@@ -79,16 +73,18 @@ describe("getPressure", () => {
   });
 
   it("prioritizes match point over break point when both apply", () => {
-    const state = baseState({
-      sets: [
-        { gamesA: 6, gamesB: 4 },
-        { gamesA: 5, gamesB: 4 }
-      ],
-      currentSet: 1,
-      gamePointsA: 3,
-      gamePointsB: 2,
-      server: "B"
-    });
+    const state = baseState(
+      {
+        sets: [
+          { gamesA: 6, gamesB: 4 },
+          { gamesA: 5, gamesB: 4 }
+        ],
+        currentSet: 1,
+        gamePointsA: 3,
+        gamePointsB: 2
+      },
+      1
+    );
 
     expect(getPressure(state, baseConfig)).toEqual({
       player: "A",

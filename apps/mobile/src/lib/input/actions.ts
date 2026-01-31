@@ -1,17 +1,17 @@
-import { pointWonBy, reset, undo } from "../tennis/engine";
-import { MatchOptions, TennisState } from "../tennis/types";
+import { pointWonBy, resetMatch, undo } from "../scoring/engine";
+import { MatchConfig, MatchState } from "../scoring/engine";
 
 export type InputAction =
   | { type: "POINT_A" }
   | { type: "POINT_B" }
   | { type: "UNDO" }
-  | { type: "RESET"; options?: MatchOptions }
+  | { type: "RESET"; config?: MatchConfig }
   | { type: "TOGGLE_INPUT" };
 
 export const applyAction = (
-  currentState: TennisState,
+  currentState: MatchState,
   action: InputAction
-): TennisState => {
+): MatchState => {
   switch (action.type) {
     case "POINT_A":
       return pointWonBy(currentState, "A");
@@ -20,16 +20,7 @@ export const applyAction = (
     case "UNDO":
       return undo(currentState);
     case "RESET":
-      return reset(
-        action.options ?? {
-          bestOf: currentState.bestOf,
-          tiebreakAt6All: currentState.tiebreakAt6All,
-          startingServer: currentState.server,
-          tiebreakTo: currentState.tiebreakTo,
-          superTiebreakOnly: currentState.superTiebreakOnly,
-          shortSetTo: currentState.shortSetTo
-        }
-      );
+      return resetMatch(currentState, action.config);
     case "TOGGLE_INPUT":
       return currentState;
     default:

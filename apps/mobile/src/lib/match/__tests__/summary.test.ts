@@ -1,37 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { buildMatchSummary } from "../summary";
 import { MatchConfig } from "../../storage/matchStorage";
-import { TennisState } from "../../tennis/types";
 import { TimelineEvent } from "../timeline";
+import { createMatch, MatchState } from "../../scoring/engine";
 
 const baseConfig: MatchConfig = {
-  playerAName: "Antti",
-  playerBName: "Elias",
+  sport: "tennis",
+  format: "singles",
+  teamA: { id: "A", players: [{ userId: "A-1", name: "Antti" }] },
+  teamB: { id: "B", players: [{ userId: "B-1", name: "Elias" }] },
   bestOf: 3,
   tiebreakAt6All: true,
+  tiebreakAt: 6,
   tiebreakTo: 7,
   superTiebreakOnly: false,
   shortSetTo: undefined,
-  startingServer: "A",
   startTime: 1000
 };
 
-const baseState = (overrides: Partial<TennisState> = {}): TennisState => ({
-  bestOf: 3,
-  tiebreakAt6All: true,
-  tiebreakTo: 7,
-  superTiebreakOnly: false,
-  shortSetTo: undefined,
-  sets: [{ gamesA: 0, gamesB: 0 }],
-  currentSet: 0,
-  gamePointsA: 0,
-  gamePointsB: 0,
-  isTiebreak: false,
-  tiebreakPointsA: 0,
-  tiebreakPointsB: 0,
-  server: "A",
-  ...overrides
-});
+const baseState = (
+  overrides: Partial<MatchState["score"]> = {}
+): MatchState => {
+  const base = createMatch(baseConfig, baseConfig.teamA, baseConfig.teamB);
+  return {
+    ...base,
+    score: { ...base.score, ...overrides }
+  };
+};
 
 const matchEndTimeline = (ts: number): TimelineEvent[] => [
   {

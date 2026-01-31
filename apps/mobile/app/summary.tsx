@@ -44,7 +44,7 @@ export default function SummaryScreen() {
       router.replace("/(tabs)");
       return;
     }
-    if (!stored.tennisState.matchWinner) {
+    if (!stored.matchState.score.matchWinner) {
       router.replace("/match");
       return;
     }
@@ -57,7 +57,7 @@ export default function SummaryScreen() {
     }
     return buildMatchSummary({
       config: match.config,
-      finalState: match.tennisState,
+      finalState: match.matchState,
       timeline: match.timeline
     });
   }, [match]);
@@ -66,7 +66,11 @@ export default function SummaryScreen() {
     if (!summary || !match) {
       return;
     }
-    const recordId = `${match.config.startTime}-${match.config.playerAName}-${match.config.playerBName}`;
+    const recordId = `${match.config.startTime}-${match.config.teamA.players
+      .map((player) => player.name)
+      .join("-")}-${match.config.teamB.players
+      .map((player) => player.name)
+      .join("-")}`;
     const storage = getStorage();
     if (storage?.getItem(LAST_SAVED_MATCH_ID_KEY) === recordId) {
       return;
@@ -75,11 +79,11 @@ export default function SummaryScreen() {
       id: recordId,
       createdAt: summary.endedAt,
       players: {
-        playerAName: match.config.playerAName,
-        playerBName: match.config.playerBName
+        playerAName: match.config.teamA.players.map((player) => player.name).join(" / "),
+        playerBName: match.config.teamB.players.map((player) => player.name).join(" / ")
       },
-      bestOf: match.config.bestOf,
-      tiebreakRule: match.config.tiebreakAt6All
+      bestOf: match.config.bestOf ?? 3,
+      tiebreakRule: (match.config.tiebreakAt ?? 6) === 6
         ? "TIEBREAK_AT_6_ALL"
         : "ADVANTAGE",
       tiebreakTo: match.config.tiebreakTo,
@@ -97,9 +101,13 @@ export default function SummaryScreen() {
     if (!summary || !match) {
       return "";
     }
-    return summary.winnerId === "A"
-      ? match.config.playerBName
-      : match.config.playerAName;
+    const teamAName = match.config.teamA.players
+      .map((player) => player.name)
+      .join(" / ");
+    const teamBName = match.config.teamB.players
+      .map((player) => player.name)
+      .join(" / ");
+    return summary.winnerId === "A" ? teamBName : teamAName;
   }, [match, summary]);
 
   const summaryLine = useMemo(() => {
@@ -154,8 +162,16 @@ export default function SummaryScreen() {
       context.strokeRect(24, 24, width - 48, height - 48);
       context.fillStyle = "#ffffff";
       context.font = "700 54px Arial";
-      context.fillText(match.config.playerAName, 80, 160);
-      context.fillText(match.config.playerBName, 80, 260);
+      context.fillText(
+        match.config.teamA.players.map((player) => player.name).join(" / "),
+        80,
+        160
+      );
+      context.fillText(
+        match.config.teamB.players.map((player) => player.name).join(" / "),
+        80,
+        260
+      );
       context.fillStyle = "#7fb4ff";
       context.font = "700 40px Arial";
       context.fillText(summary.finalScoreString, 80, 360);

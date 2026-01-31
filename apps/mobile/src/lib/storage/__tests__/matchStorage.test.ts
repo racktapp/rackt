@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { initialState } from "../../tennis/engine";
+import { createMatch } from "../../scoring/engine";
 import {
   clearMatch,
   loadMatch,
@@ -38,47 +38,44 @@ describe("matchStorage", () => {
 
   it("saves and loads match data", () => {
     const config: MatchConfig = {
-      playerAName: "Player A",
-      playerBName: "Player B",
+      sport: "tennis",
+      format: "singles",
+      teamA: { id: "A", players: [{ userId: "A-1", name: "Player A" }] },
+      teamB: { id: "B", players: [{ userId: "B-1", name: "Player B" }] },
       bestOf: 3,
       tiebreakAt6All: true,
+      tiebreakAt: 6,
       tiebreakTo: 7,
       superTiebreakOnly: false,
       shortSetTo: undefined,
-      startingServer: "A",
       startTime: Date.now()
     };
-    const tennisState = initialState({
-      bestOf: config.bestOf,
-      tiebreakAt6All: config.tiebreakAt6All,
-      tiebreakTo: config.tiebreakTo,
-      superTiebreakOnly: config.superTiebreakOnly,
-      shortSetTo: config.shortSetTo,
-      startingServer: config.startingServer
-    });
-    saveMatch({ config, tennisState, history: [], timeline: [] });
+    const matchState = createMatch(config, config.teamA, config.teamB);
+    saveMatch({ config, matchState, history: [], timeline: [] });
 
     const loaded = loadMatch();
     expect(loaded).not.toBeNull();
     expect(loaded?.config).toEqual(config);
-    expect(loaded?.tennisState.server).toBe("A");
+    expect(loaded?.matchState.server.type).toBe("tennis");
     expect(loaded?.timeline).toEqual([]);
   });
 
   it("clears saved match data", () => {
     const config: MatchConfig = {
-      playerAName: "Player A",
-      playerBName: "Player B",
+      sport: "tennis",
+      format: "singles",
+      teamA: { id: "A", players: [{ userId: "A-1", name: "Player A" }] },
+      teamB: { id: "B", players: [{ userId: "B-1", name: "Player B" }] },
       bestOf: 3,
       tiebreakAt6All: true,
+      tiebreakAt: 6,
       tiebreakTo: 7,
       superTiebreakOnly: false,
       shortSetTo: undefined,
-      startingServer: "A",
       startTime: Date.now()
     };
-    const tennisState = initialState();
-    saveMatch({ config, tennisState, history: [], timeline: [] });
+    const matchState = createMatch(config, config.teamA, config.teamB);
+    saveMatch({ config, matchState, history: [], timeline: [] });
 
     clearMatch();
     expect(loadMatch()).toBeNull();
