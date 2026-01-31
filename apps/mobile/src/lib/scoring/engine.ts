@@ -166,10 +166,14 @@ const buildServerOrder = (
     { teamId: "B", playerIndex: 0 },
     { teamId: "B", playerIndex: 1 }
   ];
-  const startingEntry = allEntries.find((entry) => {
+  let startingEntry: ServerRotationEntry | undefined;
+  for (const entry of allEntries) {
     const team = teams[entry.teamId];
-    return team.players[entry.playerIndex]?.userId === startingServerUserId;
-  });
+    if (team.players[entry.playerIndex]?.userId === startingServerUserId) {
+      startingEntry = entry;
+      break;
+    }
+  }
   const start = startingEntry ?? { teamId: "A", playerIndex: 0 };
 
   if (start.teamId === "A") {

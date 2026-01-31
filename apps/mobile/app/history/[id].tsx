@@ -87,15 +87,30 @@ export default function HistoryDetailScreen() {
     if (!record) {
       return null;
     }
+    const teamA = {
+      id: "A" as const,
+      players: [
+        { userId: "A-1", name: record.players.playerAName }
+      ]
+    };
+    const teamB = {
+      id: "B" as const,
+      players: [
+        { userId: "B-1", name: record.players.playerBName }
+      ]
+    };
     return {
-      playerAName: record.players.playerAName,
-      playerBName: record.players.playerBName,
+      sport: "tennis",
+      format: "singles",
+      teamA,
+      teamB,
       bestOf: record.bestOf,
       tiebreakAt6All: record.tiebreakRule === "TIEBREAK_AT_6_ALL",
+      tiebreakAt:
+        record.tiebreakRule === "TIEBREAK_AT_6_ALL" ? 6 : undefined,
       tiebreakTo: record.tiebreakTo ?? 7,
       superTiebreakOnly: record.superTiebreakOnly ?? false,
       shortSetTo: record.shortSetTo,
-      startingServer: "A",
       startTime: record.createdAt
     };
   }, [record]);

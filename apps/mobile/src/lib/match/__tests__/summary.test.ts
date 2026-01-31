@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildMatchSummary } from "../summary";
 import { MatchConfig } from "../../storage/matchStorage";
 import { TimelineEvent } from "../timeline";
-import { createMatch, MatchState } from "../../scoring/engine";
+import { createMatch, MatchState, TennisPadelScore } from "../../scoring/engine";
 
 const baseConfig: MatchConfig = {
   sport: "tennis",
@@ -19,12 +19,12 @@ const baseConfig: MatchConfig = {
 };
 
 const baseState = (
-  overrides: Partial<MatchState["score"]> = {}
+  overrides: Partial<TennisPadelScore> = {}
 ): MatchState => {
   const base = createMatch(baseConfig, baseConfig.teamA, baseConfig.teamB);
   return {
     ...base,
-    score: { ...base.score, ...overrides }
+    score: { ...(base.score as TennisPadelScore), ...overrides }
   };
 };
 

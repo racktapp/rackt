@@ -95,10 +95,14 @@ export const loadMatch = (): StoredMatch | null => {
             ...base.score,
             ...legacyScore
           } as MatchState["score"];
-          if (legacyServer) {
-            const serverIndex = base.server.order.findIndex(
-              (entry) => entry.teamId === legacyServer
-            );
+          if (legacyServer && base.server.type !== "badminton") {
+            let serverIndex = -1;
+            for (let index = 0; index < base.server.order.length; index += 1) {
+              if (base.server.order[index]?.teamId === legacyServer) {
+                serverIndex = index;
+                break;
+              }
+            }
             if (serverIndex >= 0) {
               base.server = { ...base.server, index: serverIndex };
             }

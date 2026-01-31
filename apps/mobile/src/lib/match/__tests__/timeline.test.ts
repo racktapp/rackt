@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createMatch, pointWonBy } from "../../scoring/engine";
+import { createMatch, pointWonBy, TennisPadelScore } from "../../scoring/engine";
 import { MatchState } from "../../scoring/engine";
 import {
   applyTimelineUpdate,
@@ -7,7 +7,7 @@ import {
 } from "../timeline";
 
 const createState = (
-  overrides: Partial<MatchState["score"]> = {}
+  overrides: Partial<TennisPadelScore> = {}
 ): MatchState => {
   const base = createMatch(
     { sport: "tennis", format: "singles" },
@@ -16,7 +16,7 @@ const createState = (
   );
   return {
     ...base,
-    score: { ...base.score, ...overrides }
+    score: { ...(base.score as TennisPadelScore), ...overrides }
   };
 };
 

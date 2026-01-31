@@ -358,6 +358,9 @@ export default function MatchScreen() {
 
   const formatTimelineEvent = useCallback(
     (event: TimelineEvent): string => {
+      if (!config) {
+        return event.label;
+      }
       const playerName =
         event.player === "A"
           ? formatTeamName(config, "A")

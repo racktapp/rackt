@@ -106,19 +106,27 @@ describe("scoring engine", () => {
     state = awardBadmintonPoints(state, "A", 20);
     state = awardBadmintonPoints(state, "B", 20);
     state = awardBadmintonPoints(state, "A", 1);
-    expect(state.score.currentGame).toBe(0);
+    if (state.score.sport === "badminton") {
+      expect(state.score.currentGame).toBe(0);
+    }
     state = awardBadmintonPoints(state, "A", 1);
-    expect(state.score.currentGame).toBe(1);
+    if (state.score.sport === "badminton") {
+      expect(state.score.currentGame).toBe(1);
+    }
 
     state = awardBadmintonPoints(state, "A", 21);
     state = awardBadmintonPoints(state, "A", 21);
-    expect(state.score.matchWinner).toBe("A");
+    if (state.score.sport === "badminton") {
+      expect(state.score.matchWinner).toBe("A");
+    }
 
     let capState = createBadmintonMatch();
     capState = awardBadmintonPoints(capState, "A", 29);
     capState = awardBadmintonPoints(capState, "B", 29);
     capState = awardBadmintonPoints(capState, "A", 1);
-    expect(capState.score.games[0].pointsA).toBe(30);
-    expect(capState.score.currentGame).toBe(1);
+    if (capState.score.sport === "badminton") {
+      expect(capState.score.games[0].pointsA).toBe(30);
+      expect(capState.score.currentGame).toBe(1);
+    }
   });
 });

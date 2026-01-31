@@ -1,6 +1,6 @@
 import { InputAction } from "../input/actions";
 import { getSetWinner } from "../tennis/rules";
-import { MatchState, TeamId } from "../scoring/engine";
+import { MatchState, TeamId, TennisPadelScore } from "../scoring/engine";
 
 export type TimelineEventType =
   | "POINT"
@@ -18,10 +18,16 @@ export type TimelineEvent = {
   label: string;
 };
 
+type TennisRules = Pick<TennisPadelScore, "tiebreakAt6All" | "shortSetTo">;
+
+const isTennisPadelScore = (
+  score: MatchState["score"]
+): score is TennisPadelScore => score.sport !== "badminton";
+
 const setWinnerFromScore = (
   gamesA: number,
   gamesB: number,
-  state: Pick<MatchState["score"], "tiebreakAt6All" | "shortSetTo">
+  state: TennisRules
 ): TeamId | undefined =>
   getSetWinner(gamesA, gamesB, {
     tiebreakAt6All: state.tiebreakAt6All,
@@ -63,27 +69,34 @@ export const deriveTimelineEvent = (
   }
 
   if (
-    prevState.score.sport !== "badminton" &&
+    isTennisPadelScore(prevState.score) &&
+    isTennisPadelScore(nextState.score) &&
     !prevState.score.isTiebreak &&
     nextState.score.isTiebreak
   ) {
     return buildEvent("TIEBREAK_START", "Tie-break started");
   }
 
-  if (nextState.score.sport === "badminton") {
-    if (nextState.score.currentGame > prevState.score.currentGame) {
-      const finishedGame = nextState.score.games[prevState.score.currentGame];
-      const winner =
-        finishedGame?.pointsA > finishedGame?.pointsB
-          ? "A"
-          : finishedGame?.pointsB > finishedGame?.pointsA
-            ? "B"
-            : undefined;
-      if (winner) {
-        return buildEvent("GAME", "Game won", winner);
+  if (!isTennisPadelScore(nextState.score)) {
+    if (!isTennisPadelScore(prevState.score)) {
+      if (nextState.score.currentGame > prevState.score.currentGame) {
+        const finishedGame =
+          nextState.score.games[prevState.score.currentGame];
+        const winner =
+          finishedGame?.pointsA > finishedGame?.pointsB
+            ? "A"
+            : finishedGame?.pointsB > finishedGame?.pointsA
+              ? "B"
+              : undefined;
+        if (winner) {
+          return buildEvent("GAME", "Game won", winner);
+        }
       }
     }
-  } else if (nextState.score.currentSet > prevState.score.currentSet) {
+  } else if (
+    isTennisPadelScore(prevState.score) &&
+    nextState.score.currentSet > prevState.score.currentSet
+  ) {
     const finishedSet = nextState.score.sets[prevState.score.currentSet];
     const winner = setWinnerFromScore(
       finishedSet.gamesA,
@@ -96,7 +109,8 @@ export const deriveTimelineEvent = (
   }
 
   if (
-    nextState.score.sport !== "badminton" &&
+    isTennisPadelScore(nextState.score) &&
+    isTennisPadelScore(prevState.score) &&
     nextState.score.currentSet === prevState.score.currentSet
   ) {
     const prevSet = prevState.score.sets[prevState.score.currentSet];
@@ -118,21 +132,27 @@ export const deriveTimelineEvent = (
   }
 
   const player = action.type === "POINT_A" ? "A" : "B";
-  if (
-    (prevState.score.sport === "badminton" &&
-      (prevState.score.games[prevState.score.currentGame]?.pointsA !==
+  if (!isTennisPadelScore(prevState.score) && !isTennisPadelScore(nextState.score)) {
+    if (
+      prevState.score.games[prevState.score.currentGame]?.pointsA !==
         nextState.score.games[nextState.score.currentGame]?.pointsA ||
-        prevState.score.games[prevState.score.currentGame]?.pointsB !==
-          nextState.score.games[nextState.score.currentGame]?.pointsB)) ||
-    (prevState.score.sport !== "badminton" &&
-      (prevState.score.gamePointsA !== nextState.score.gamePointsA ||
-        prevState.score.gamePointsB !== nextState.score.gamePointsB ||
-        prevState.score.tiebreakPointsA !==
-          nextState.score.tiebreakPointsA ||
-        prevState.score.tiebreakPointsB !==
-          nextState.score.tiebreakPointsB))
+      prevState.score.games[prevState.score.currentGame]?.pointsB !==
+        nextState.score.games[nextState.score.currentGame]?.pointsB
+    ) {
+      return buildEvent("POINT", "Point won", player);
+    }
+  } else if (
+    isTennisPadelScore(prevState.score) &&
+    isTennisPadelScore(nextState.score)
   ) {
-    return buildEvent("POINT", "Point won", player);
+    if (
+      prevState.score.gamePointsA !== nextState.score.gamePointsA ||
+      prevState.score.gamePointsB !== nextState.score.gamePointsB ||
+      prevState.score.tiebreakPointsA !== nextState.score.tiebreakPointsA ||
+      prevState.score.tiebreakPointsB !== nextState.score.tiebreakPointsB
+    ) {
+      return buildEvent("POINT", "Point won", player);
+    }
   }
 
   return null;

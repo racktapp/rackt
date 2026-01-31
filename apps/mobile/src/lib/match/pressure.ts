@@ -1,5 +1,5 @@
 import { MatchConfig } from "../storage/matchStorage";
-import { pointWonBy } from "../scoring/engine";
+import { pointWonBy, TennisPadelScore } from "../scoring/engine";
 import { getSetWinner } from "../tennis/rules";
 import { MatchState, TeamId } from "../scoring/engine";
 
@@ -13,11 +13,12 @@ export type PressureIndicator = {
 export const isTieBreak = (state: MatchState): boolean =>
   state.score.sport !== "badminton" && state.score.isTiebreak;
 
-const countSetsWon = (
-  sets: MatchState["score"] extends { sets: infer T } ? T : never,
-  config: MatchConfig
-) => {
-  return sets.reduce(
+const isTennisPadelScore = (
+  score: MatchState["score"]
+): score is TennisPadelScore => score.sport !== "badminton";
+
+const countSetsWon = (sets: TennisPadelScore["sets"], config: MatchConfig) =>
+  sets.reduce(
     (acc, set) => {
       const winner = getSetWinner(set.gamesA, set.gamesB, {
         tiebreakAt6All:
@@ -34,18 +35,21 @@ const countSetsWon = (
     },
     { winsA: 0, winsB: 0 }
   );
-};
 
 export const nextPointWinsGame = (
   state: MatchState,
   player: TeamId
 ): boolean => {
-  if (state.score.sport === "badminton" || isTieBreak(state)) {
+  if (!isTennisPadelScore(state.score) || isTieBreak(state)) {
     return false;
   }
   const nextState = pointWonBy(state, player);
   const prevSet = state.score.sets[state.score.currentSet];
-  const nextSet = nextState.score.sets[state.score.currentSet] ?? prevSet;
+  const nextScore = nextState.score;
+  if (!isTennisPadelScore(nextScore)) {
+    return false;
+  }
+  const nextSet = nextScore.sets[state.score.currentSet] ?? prevSet;
   const prevGames = player === "A" ? prevSet.gamesA : prevSet.gamesB;
   const nextGames = player === "A" ? nextSet.gamesA : nextSet.gamesB;
   return nextGames > prevGames;
@@ -56,12 +60,16 @@ export const nextPointWinsSet = (
   player: TeamId,
   config: MatchConfig
 ): boolean => {
-  if (state.score.sport === "badminton") {
+  if (!isTennisPadelScore(state.score)) {
     return false;
   }
   const nextState = pointWonBy(state, player);
   const prevWins = countSetsWon(state.score.sets, config);
-  const nextWins = countSetsWon(nextState.score.sets, config);
+  const nextScore = nextState.score;
+  if (!isTennisPadelScore(nextScore)) {
+    return false;
+  }
+  const nextWins = countSetsWon(nextScore.sets, config);
   return player === "A"
     ? nextWins.winsA > prevWins.winsA
     : nextWins.winsB > prevWins.winsB;
@@ -76,12 +84,16 @@ export const nextPointWinsMatch = (
   if (nextState.score.matchWinner === player) {
     return true;
   }
-  if (state.score.sport === "badminton") {
+  if (!isTennisPadelScore(state.score)) {
     const neededGames = config.gamesToWin ?? 2;
-    const gamesWonA = nextState.score.games.filter(
+    const nextScore = nextState.score;
+    if (isTennisPadelScore(nextScore)) {
+      return false;
+    }
+    const gamesWonA = nextScore.games.filter(
       (game) => game.pointsA > game.pointsB
     ).length;
-    const gamesWonB = nextState.score.games.filter(
+    const gamesWonB = nextScore.games.filter(
       (game) => game.pointsB > game.pointsA
     ).length;
     return player === "A"
@@ -89,7 +101,11 @@ export const nextPointWinsMatch = (
       : gamesWonB >= neededGames;
   }
   const neededSets = Math.ceil((config.bestOf ?? 3) / 2);
-  const nextWins = countSetsWon(nextState.score.sets, config);
+  const nextScore = nextState.score;
+  if (!isTennisPadelScore(nextScore)) {
+    return false;
+  }
+  const nextWins = countSetsWon(nextScore.sets, config);
   return player === "A"
     ? nextWins.winsA >= neededSets
     : nextWins.winsB >= neededSets;

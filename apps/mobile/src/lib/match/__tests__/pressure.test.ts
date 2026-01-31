@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getPressure } from "../pressure";
 import { MatchConfig } from "../../storage/matchStorage";
-import { createMatch, MatchState } from "../../scoring/engine";
+import { createMatch, MatchState, TennisPadelScore } from "../../scoring/engine";
 
 const baseConfig: MatchConfig = {
   sport: "tennis",
@@ -18,14 +18,18 @@ const baseConfig: MatchConfig = {
 };
 
 const baseState = (
-  overrides: Partial<MatchState["score"]> = {},
+  overrides: Partial<TennisPadelScore> = {},
   serverIndex = 0
 ): MatchState => {
   const base = createMatch(baseConfig, baseConfig.teamA, baseConfig.teamB);
+  const server =
+    base.server.type === "badminton"
+      ? base.server
+      : { ...base.server, index: serverIndex };
   return {
     ...base,
-    score: { ...base.score, ...overrides },
-    server: { ...base.server, index: serverIndex }
+    score: { ...(base.score as TennisPadelScore), ...overrides },
+    server
   };
 };
 
