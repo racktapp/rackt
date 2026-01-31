@@ -178,7 +178,7 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     loadingText: {
       marginTop: 12,
@@ -186,7 +186,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     content: {
       padding: 24,
@@ -215,7 +215,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       gap: 6
     },
     ratingSport: {
@@ -237,7 +237,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     emptyText: {
       color: colors.muted,
@@ -249,7 +249,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       gap: 8
     },
     errorTitle: {

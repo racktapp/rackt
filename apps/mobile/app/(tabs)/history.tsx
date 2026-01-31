@@ -145,7 +145,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     container: {
       padding: 24,
@@ -174,7 +174,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       alignItems: "center",
       justifyContent: "center"
     },
@@ -199,7 +199,7 @@ const createStyles = (colors: ThemeColors) =>
     emptyState: {
       padding: 20,
       borderRadius: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border
     },
@@ -216,7 +216,7 @@ const createStyles = (colors: ThemeColors) =>
     historyCard: {
       padding: 16,
       borderRadius: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
       gap: 6
@@ -232,7 +232,7 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: "700"
     },
     historyScore: {
-      color: colors.accent,
+      color: colors.primary,
       fontSize: 13,
       fontWeight: "700"
     },

@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { MatchSummary } from "../lib/match/summary";
 import { MatchConfig } from "../lib/storage/matchStorage";
+import { ThemeColors, useSettings } from "./SettingsProvider";
 
 type MatchSummaryViewProps = {
   config: MatchConfig;
@@ -23,6 +25,9 @@ export default function MatchSummaryView({
   matchDate,
   durationLabel
 }: MatchSummaryViewProps) {
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <>
       <View style={styles.heroCard}>
@@ -100,119 +105,120 @@ export default function MatchSummaryView({
   );
 }
 
-const styles = StyleSheet.create({
-  heroCard: {
-    padding: 18,
-    borderRadius: 18,
-    backgroundColor: "#12151c",
-    borderWidth: 1,
-    borderColor: "#242a36",
-    alignItems: "center",
-    gap: 8
-  },
-  heroWinner: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "700"
-  },
-  heroLine: {
-    color: "#cfe1ff",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center"
-  },
-  heroMeta: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  card: {
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#11141b",
-    borderWidth: 1,
-    borderColor: "#242a36",
-    gap: 12
-  },
-  cardTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  tableHeader: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#242a36",
-    paddingBottom: 8
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 6
-  },
-  tableCell: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 14
-  },
-  tableLabel: {
-    color: "#9da5b4",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    fontSize: 12
-  },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  statLabel: {
-    color: "#9da5b4",
-    fontSize: 13
-  },
-  statValue: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600"
-  },
-  cardPreview: {
-    borderRadius: 18,
-    padding: 18,
-    backgroundColor: "#151923",
-    borderWidth: 1,
-    borderColor: "#2a2f3a",
-    gap: 12
-  },
-  cardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  cardPlayer: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700"
-  },
-  cardScore: {
-    color: "#7fb4ff",
-    fontSize: 14,
-    fontWeight: "700"
-  },
-  cardMeta: {
-    color: "#9da5b4",
-    fontSize: 12
-  },
-  cardFooter: {
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#2a2f3a",
-    alignItems: "flex-end"
-  },
-  cardFooterText: {
-    color: "#9da5b4",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  cardHint: {
-    color: "#9da5b4",
-    fontSize: 12
-  }
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    heroCard: {
+      padding: 18,
+      borderRadius: 18,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      gap: 8
+    },
+    heroWinner: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: "700"
+    },
+    heroLine: {
+      color: colors.primary,
+      fontSize: 16,
+      fontWeight: "600",
+      textAlign: "center"
+    },
+    heroMeta: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    card: {
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: colors.cardAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12
+    },
+    cardTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600"
+    },
+    tableHeader: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingBottom: 8
+    },
+    tableRow: {
+      flexDirection: "row",
+      paddingVertical: 6
+    },
+    tableCell: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 14
+    },
+    tableLabel: {
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      fontSize: 12
+    },
+    statRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    statLabel: {
+      color: colors.muted,
+      fontSize: 13
+    },
+    statValue: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "600"
+    },
+    cardPreview: {
+      borderRadius: 18,
+      padding: 18,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12
+    },
+    cardRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    cardPlayer: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "700"
+    },
+    cardScore: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: "700"
+    },
+    cardMeta: {
+      color: colors.muted,
+      fontSize: 12
+    },
+    cardFooter: {
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      alignItems: "flex-end"
+    },
+    cardFooterText: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "600"
+    },
+    cardHint: {
+      color: colors.muted,
+      fontSize: 12
+    }
+  });

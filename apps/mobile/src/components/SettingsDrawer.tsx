@@ -81,8 +81,8 @@ export default function SettingsDrawer({
               <Switch
                 value={settings.haptics}
                 onValueChange={(value) => updateSettings({ haptics: value })}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.card}
               />
             </View>
           </View>
@@ -96,8 +96,8 @@ export default function SettingsDrawer({
               <Switch
                 value={settings.sounds}
                 onValueChange={(value) => updateSettings({ sounds: value })}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.card}
               />
             </View>
           </View>
@@ -115,8 +115,8 @@ export default function SettingsDrawer({
                 onValueChange={(value) =>
                   updateSettings({ pushNotifications: value })
                 }
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.card}
               />
             </View>
           </View>
@@ -146,7 +146,7 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.overlay
     },
     sheet: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       paddingHorizontal: 20,
       paddingTop: 18,
       paddingBottom: 28,
@@ -170,7 +170,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     closeButtonText: {
       color: colors.text,
@@ -200,11 +200,11 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: "center",
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     optionPillActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
     },
     optionText: {
       fontWeight: "600",
@@ -212,7 +212,7 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 13
     },
     optionTextActive: {
-      color: "#fff"
+      color: "#0B1220"
     },
     toggleRow: {
       flexDirection: "row",
@@ -226,7 +226,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 8,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border
     },

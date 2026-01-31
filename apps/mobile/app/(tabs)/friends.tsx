@@ -49,7 +49,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     container: {
       flex: 1,
@@ -78,7 +78,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       alignItems: "center",
       justifyContent: "center"
     },
@@ -90,7 +90,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     cardTitle: {
       color: colors.text,
@@ -106,13 +106,13 @@ const createStyles = (colors: ThemeColors) =>
     cardButton: {
       marginTop: 16,
       alignSelf: "flex-start",
-      backgroundColor: colors.accent,
+      backgroundColor: colors.primary,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 999
     },
     cardButtonText: {
-      color: "#fff",
+      color: "#0B1220",
       fontWeight: "700",
       fontSize: 14
     }

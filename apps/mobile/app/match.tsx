@@ -45,7 +45,7 @@ const formatTeamName = (config: MatchConfig, teamId: "A" | "B") => {
   return team.players.map((player) => player.name).join(" / ");
 };
 
-const useScorePulse = (value: string | number) => {
+const useScorePulse = (value: string | number, colors: ThemeColors) => {
   const animation = useRef(new Animated.Value(0)).current;
   const previousValue = useRef(value);
   const [changed, setChanged] = useState(false);
@@ -74,7 +74,7 @@ const useScorePulse = (value: string | number) => {
 
   const borderColor = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: ["#2a2f3a", "#6aa7ff"]
+    outputRange: [colors.border, colors.primary]
   });
 
   const scale = animation.interpolate({
@@ -106,21 +106,13 @@ export default function MatchScreen() {
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const PressureBadge = ({ indicator }: { indicator: PressureIndicator }) => {
-    const badgeStyle =
-      indicator.type === "MATCH_POINT"
-        ? styles.pressureBadgeMatch
-        : indicator.type === "SET_POINT"
-          ? styles.pressureBadgeSet
-          : styles.pressureBadgeBreak;
-    return (
-      <View style={[styles.pressureBadge, badgeStyle]}>
-        <Text style={styles.pressureBadgeText}>
-          {pressureLabel[indicator.type]}
-        </Text>
-      </View>
-    );
-  };
+  const PressureBadge = ({ indicator }: { indicator: PressureIndicator }) => (
+    <View style={styles.pressureBadge}>
+      <Text style={styles.pressureBadgeText}>
+        {pressureLabel[indicator.type]}
+      </Text>
+    </View>
+  );
 
   useEffect(() => {
     const stored = loadMatch();
@@ -247,10 +239,10 @@ export default function MatchScreen() {
       ? `${pointsBValue}`
       : displayScore?.pointLabelB ?? "0";
 
-  const gamesAPulse = useScorePulse(gamesAValue);
-  const gamesBPulse = useScorePulse(gamesBValue);
-  const pointsAPulse = useScorePulse(pointsALabel);
-  const pointsBPulse = useScorePulse(pointsBLabel);
+  const gamesAPulse = useScorePulse(gamesAValue, colors);
+  const gamesBPulse = useScorePulse(gamesBValue, colors);
+  const pointsAPulse = useScorePulse(pointsALabel, colors);
+  const pointsBPulse = useScorePulse(pointsBLabel, colors);
 
   const resetScores = useCallback(() => {
     if (!config) {
@@ -761,7 +753,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     scrollContent: {
       padding: 24,
@@ -783,7 +775,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 17,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border
     },
@@ -815,7 +807,7 @@ const createStyles = (colors: ThemeColors) =>
     statusCard: {
       borderRadius: 16,
       padding: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border
     },
@@ -850,7 +842,7 @@ const createStyles = (colors: ThemeColors) =>
       width: 6,
       height: 6,
       borderRadius: 999,
-      backgroundColor: "#2ecc71"
+      backgroundColor: colors.success
     },
     resetScoreButton: {
       paddingHorizontal: 10,
@@ -867,7 +859,7 @@ const createStyles = (colors: ThemeColors) =>
     playerCard: {
       borderRadius: 18,
       padding: 18,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
       gap: 16
@@ -898,13 +890,13 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     servingBadgeDot: {
       width: 6,
       height: 6,
       borderRadius: 999,
-      backgroundColor: "#2ecc71"
+      backgroundColor: colors.success
     },
     servingBadgeText: {
       color: colors.text,
@@ -916,23 +908,14 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: 4,
       borderRadius: 999,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt
+      borderColor: colors.highlight,
+      backgroundColor: colors.highlight
     },
     pressureBadgeText: {
-      color: colors.text,
+      color: "#0B1220",
       fontSize: 11,
       fontWeight: "700",
       letterSpacing: 0.2
-    },
-    pressureBadgeBreak: {
-      borderColor: colors.accent
-    },
-    pressureBadgeSet: {
-      borderColor: "#7fb4ff"
-    },
-    pressureBadgeMatch: {
-      borderColor: "#ff8b8b"
     },
     serverDot: {
       width: 10,
@@ -940,7 +923,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 999
     },
     serverDotActive: {
-      backgroundColor: "#2ecc71"
+      backgroundColor: colors.success
     },
     serverDotInactive: {
       backgroundColor: colors.border
@@ -954,14 +937,14 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: 6,
       paddingHorizontal: 8,
       borderRadius: 8,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: "center"
     },
     setBoxActive: {
-      borderColor: colors.accent,
-      backgroundColor: colors.surface
+      borderColor: colors.primary,
+      backgroundColor: colors.card
     },
     setBoxText: {
       color: colors.text,
@@ -991,16 +974,16 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center"
     },
     scoreValueChanged: {
-      shadowColor: colors.accent,
+      shadowColor: colors.primary,
       shadowOpacity: 0.35,
       shadowRadius: 6,
       elevation: 3
     },
     gamesBox: {
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     pointsBox: {
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     gamesValue: {
       color: colors.text,
@@ -1014,7 +997,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     timelinePanel: {
       borderRadius: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: "hidden"
@@ -1066,7 +1049,7 @@ const createStyles = (colors: ThemeColors) =>
       height: 8,
       borderRadius: 999,
       marginTop: 6,
-      backgroundColor: colors.accent
+      backgroundColor: colors.primary
     },
     timelineContent: {
       flex: 1,
@@ -1093,7 +1076,7 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.border
     },
     secondaryButtonText: {
-      color: "#ff8b8b",
+      color: colors.danger,
       fontSize: 13,
       fontWeight: "600"
     },
@@ -1106,7 +1089,7 @@ const createStyles = (colors: ThemeColors) =>
       gap: 12,
       paddingHorizontal: 16,
       paddingVertical: 14,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderTopWidth: 1,
       borderTopColor: colors.border
     },
@@ -1118,10 +1101,10 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: "center"
     },
     actionButtonPrimary: {
-      backgroundColor: colors.accent
+      backgroundColor: colors.primary
     },
     actionButtonSecondary: {
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     actionButtonText: {
       color: colors.text,
@@ -1130,11 +1113,11 @@ const createStyles = (colors: ThemeColors) =>
       textAlign: "center"
     },
     actionButtonTextLight: {
-      color: "#fff"
+      color: "#0B1220"
     },
     controllerPanel: {
       borderRadius: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: "hidden"
@@ -1193,7 +1176,7 @@ const createStyles = (colors: ThemeColors) =>
     controllerButton: {
       paddingVertical: 10,
       borderRadius: 10,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       alignItems: "center"
     },
     controllerButtonText: {
@@ -1212,9 +1195,9 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 999
     },
     controllerStatusDotOn: {
-      backgroundColor: "#2ecc71"
+      backgroundColor: colors.success
     },
     controllerStatusDotOff: {
-      backgroundColor: "#ff7675"
+      backgroundColor: colors.danger
     }
   });

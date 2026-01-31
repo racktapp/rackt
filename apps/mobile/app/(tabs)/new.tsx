@@ -418,8 +418,8 @@ export default function SetupMatch() {
                     setTiebreakTo(7);
                   }
                 }}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.card}
               />
             </View>
             <Text style={styles.helperText}>
@@ -439,8 +439,8 @@ export default function SetupMatch() {
                     setSuperTiebreakOnly(false);
                   }
                 }}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.card}
               />
             </View>
             <Text style={styles.helperText}>
@@ -455,8 +455,8 @@ export default function SetupMatch() {
                 value={tiebreakAt6All}
                 onValueChange={setTiebreakAt6All}
                 disabled={superTiebreakOnly}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.card}
               />
             </View>
           </View>
@@ -625,7 +625,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     scrollContent: {
       padding: 24,
@@ -643,7 +643,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border
     },
@@ -660,7 +660,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: 16
@@ -681,7 +681,7 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: 8
     },
     input: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderRadius: 12,
       paddingHorizontal: 16,
       paddingVertical: 12,
@@ -702,14 +702,14 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       paddingVertical: 12,
       borderRadius: 12,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       alignItems: "center",
       borderWidth: 1,
       borderColor: colors.border
     },
     toggleButtonActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
     },
     toggleButtonDisabled: {
       opacity: 0.5
@@ -720,7 +720,7 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: "600"
     },
     toggleTextActive: {
-      color: "#fff"
+      color: "#0B1220"
     },
     toggleTextDisabled: {
       color: colors.muted
@@ -739,11 +739,11 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 16,
       paddingVertical: 16,
       borderRadius: 14,
-      backgroundColor: colors.accent,
+      backgroundColor: colors.primary,
       alignItems: "center"
     },
     startButtonText: {
-      color: "#fff",
+      color: "#0B1220",
       fontSize: 18,
       fontWeight: "700"
     },
@@ -754,7 +754,7 @@ const createStyles = (colors: ThemeColors) =>
     secondaryButton: {
       paddingVertical: 12,
       borderRadius: 12,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: "center"

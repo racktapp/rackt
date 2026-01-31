@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
 import { router } from "expo-router";
 
 import { GamepadEvent, gamepadAvailable, useGamepad } from "../lib/gamepad";
+import { useSettings } from "../src/components/SettingsProvider";
 
 const formatEvent = (event: GamepadEvent) => {
   switch (event.type) {
@@ -32,6 +34,8 @@ export default function ControllerSetupScreen() {
   const isAndroid = Platform.OS === "android";
   const { connected, lastEvent, buttonsDown } = useGamepad();
   const [eventLog, setEventLog] = useState<GamepadEvent[]>([]);
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (!lastEvent) {
@@ -53,6 +57,28 @@ export default function ControllerSetupScreen() {
 
   if (isAndroid) {
     return (
+      <SafeAreaView style={styles.screen}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Controller Setup</Text>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.subtitle}>iOS only for now.</Text>
+            <Text style={styles.bodyText}>
+              This screen is iOS only for now. Pair a controller on iOS to test live
+              input events once the module is installed.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Controller Setup</Text>
@@ -60,130 +86,123 @@ export default function ControllerSetupScreen() {
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.card}>
-          <Text style={styles.subtitle}>iOS only for now.</Text>
-          <Text style={styles.bodyText}>
-            This screen is iOS only for now. Pair a controller on iOS to test live
-            input events once the module is installed.
-          </Text>
-        </View>
-      </ScrollView>
-    );
-  }
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Controller Setup</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-      </View>
-
-      {!gamepadAvailable && (
-        <View style={styles.card}>
-          <Text style={styles.subtitle}>Module not available</Text>
-          <Text style={styles.bodyText}>
-            Gamepad module not installed. Rebuild the iOS dev client and
-            reinstall.
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Connect your controller (iOS only)</Text>
-        <Text style={styles.bodyText}>
-          1. Open Settings → Bluetooth on your iPhone.
-        </Text>
-        <Text style={styles.bodyText}>
-          2. Hold the pairing button on your Xbox or PlayStation controller until it
-          appears.
-        </Text>
-        <Text style={styles.bodyText}>
-          3. Tap the controller name to pair, then return to Rackt.
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Status</Text>
-        <Text style={styles.statusText}>{status}</Text>
-        <Text style={styles.bodyText}>Controller: {controllerLabel}</Text>
-        {pressedButtons.length > 0 ? (
-          <Text style={styles.bodyText}>
-            Buttons down: {pressedButtons.join(", ")}
-          </Text>
-        ) : (
-          <Text style={styles.bodyText}>Buttons down: None</Text>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Live event log</Text>
-        {eventLog.length === 0 ? (
-          <Text style={styles.bodyText}>
-            No events yet. Press buttons or move sticks to see updates.
-          </Text>
-        ) : (
-          <View style={styles.eventList}>
-            {eventLog.map((event, index) => (
-              <Text key={`${event.type}-${index}`} style={styles.eventItem}>
-                {formatEvent(event)}
-              </Text>
-            ))}
+        {!gamepadAvailable && (
+          <View style={styles.card}>
+            <Text style={styles.subtitle}>Module not available</Text>
+            <Text style={styles.bodyText}>
+              Gamepad module not installed. Rebuild the iOS dev client and
+              reinstall.
+            </Text>
           </View>
         )}
-      </View>
-    </ScrollView>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Connect your controller (iOS only)</Text>
+          <Text style={styles.bodyText}>
+            1. Open Settings → Bluetooth on your iPhone.
+          </Text>
+          <Text style={styles.bodyText}>
+            2. Hold the pairing button on your Xbox or PlayStation controller until it
+            appears.
+          </Text>
+          <Text style={styles.bodyText}>
+            3. Tap the controller name to pair, then return to Rackt.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Status</Text>
+          <Text style={styles.statusText}>{status}</Text>
+          <Text style={styles.bodyText}>Controller: {controllerLabel}</Text>
+          {pressedButtons.length > 0 ? (
+            <Text style={styles.bodyText}>
+              Buttons down: {pressedButtons.join(", ")}
+            </Text>
+          ) : (
+            <Text style={styles.bodyText}>Buttons down: None</Text>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Live event log</Text>
+          {eventLog.length === 0 ? (
+            <Text style={styles.bodyText}>
+              No events yet. Press buttons or move sticks to see updates.
+            </Text>
+          ) : (
+            <View style={styles.eventList}>
+              {eventLog.map((event, index) => (
+                <Text key={`${event.type}-${index}`} style={styles.eventItem}>
+                  {formatEvent(event)}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    gap: 16
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  backText: {
-    fontSize: 16,
-    color: "#111",
-    fontWeight: "600"
-  },
-  card: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
-    padding: 16,
-    gap: 8
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: "600"
-  },
-  statusText: {
-    fontSize: 20,
-    fontWeight: "700"
-  },
-  bodyText: {
-    color: "#555",
-    lineHeight: 20
-  },
-  eventList: {
-    gap: 8
-  },
-  eventItem: {
-    fontSize: 14,
-    color: "#111"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.bg
+    },
+    container: {
+      flexGrow: 1,
+      padding: 24,
+      gap: 16
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between"
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    backText: {
+      fontSize: 16,
+      color: colors.primary,
+      fontWeight: "600"
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subtitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text
+    },
+    statusText: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.text
+    },
+    bodyText: {
+      color: colors.muted,
+      lineHeight: 20
+    },
+    eventList: {
+      gap: 8
+    },
+    eventItem: {
+      fontSize: 14,
+      color: colors.text
+    }
+  });

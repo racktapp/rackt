@@ -199,7 +199,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     container: {
       padding: 24,
@@ -228,7 +228,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.cardAlt,
       alignItems: "center",
       justifyContent: "center"
     },
@@ -237,13 +237,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     primaryButton: {
       alignSelf: "flex-start",
-      backgroundColor: colors.accent,
+      backgroundColor: colors.primary,
       paddingHorizontal: 16,
       paddingVertical: 10,
       borderRadius: 999
     },
     primaryButtonText: {
-      color: "#fff",
+      color: "#0B1220",
       fontWeight: "700",
       fontSize: 14
     },
@@ -275,7 +275,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       gap: 8
     },
     emptyTitle: {
@@ -292,7 +292,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       gap: 6
     },
     cardTitle: {

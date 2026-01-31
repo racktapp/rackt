@@ -358,7 +358,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: colors.bg
     },
     container: {
       padding: 24,
@@ -397,13 +397,13 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       gap: 8
     },
     skeletonLine: {
       height: 12,
       borderRadius: 6,
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     skeletonLineShort: {
       width: "60%"
@@ -421,10 +421,10 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface
+      backgroundColor: colors.card
     },
     activityCardPressable: {
-      shadowColor: "#000",
+      shadowColor: colors.border,
       shadowOpacity: 0.06,
       shadowOffset: { width: 0, height: 4 },
       shadowRadius: 8
@@ -448,7 +448,7 @@ const createStyles = (colors: ThemeColors) =>
     emptyState: {
       padding: 20,
       borderRadius: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
       gap: 10
@@ -470,7 +470,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt
+      backgroundColor: colors.cardAlt
     },
     secondaryButtonText: {
       color: colors.text,

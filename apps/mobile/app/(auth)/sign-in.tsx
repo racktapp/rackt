@@ -2,7 +2,6 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
-  Button,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -11,11 +10,15 @@ import {
 } from "react-native";
 
 import { supabase } from "../../lib/supabase";
+import AppButton from "../../src/components/AppButton";
+import { useSettings } from "../../src/components/SettingsProvider";
 
 export default function SignInScreen() {
+  const { colors } = useSettings();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const styles = createStyles(colors);
 
   const handleSignIn = async () => {
     const trimmedEmail = email.trim();
@@ -54,6 +57,7 @@ export default function SignInScreen() {
           keyboardType="email-address"
           onChangeText={setEmail}
           placeholder="Email"
+          placeholderTextColor={colors.muted}
           style={styles.input}
           value={email}
         />
@@ -62,13 +66,14 @@ export default function SignInScreen() {
           autoComplete="password"
           onChangeText={setPassword}
           placeholder="Password"
+          placeholderTextColor={colors.muted}
           secureTextEntry
           style={styles.input}
           value={password}
         />
         <View style={styles.buttonRow}>
-          <Button
-            title={isSubmitting ? "Signing in..." : "Sign in"}
+          <AppButton
+            label={isSubmitting ? "Signing in..." : "Sign in"}
             onPress={handleSignIn}
             disabled={isSubmitting}
           />
@@ -85,34 +90,38 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: "#fff"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  subtitle: {
-    color: "#666"
-  },
-  form: {
-    gap: 12
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10
-  },
-  buttonRow: {
-    marginTop: 8
-  },
-  link: {
-    color: "#2563eb"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 24,
+      gap: 16,
+      backgroundColor: colors.bg
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subtitle: {
+      color: colors.muted
+    },
+    form: {
+      gap: 12
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      backgroundColor: colors.card,
+      color: colors.text
+    },
+    buttonRow: {
+      marginTop: 8
+    },
+    link: {
+      color: colors.primary
+    }
+  });

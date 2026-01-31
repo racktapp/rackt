@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Button,
   StyleSheet,
   Switch,
   Text,
@@ -12,12 +11,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { supabase } from "../../lib/supabase";
+import AppButton from "../../src/components/AppButton";
 import { useSettings } from "../../src/components/SettingsProvider";
 
 export default function SettingsScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { settings, colors, updateSettings } = useSettings();
+  const styles = createStyles(colors);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -73,20 +74,21 @@ export default function SettingsScreen() {
         {isSigningOut ? (
           <ActivityIndicator />
         ) : (
-          <Button
-            title="Sign out"
+          <AppButton
+            label="Sign out"
             onPress={handleSignOut}
             disabled={isDeletingAccount}
+            variant="secondary"
           />
         )}
         {isDeletingAccount ? (
           <ActivityIndicator />
         ) : (
-          <Button
-            title="Delete account"
+          <AppButton
+            label="Delete account"
             onPress={handleDeleteAccount}
-            color="#dc2626"
             disabled={isSigningOut}
+            variant="danger"
           />
         )}
       </View>
@@ -105,8 +107,8 @@ export default function SettingsScreen() {
             onValueChange={(value) =>
               updateSettings({ pushNotifications: value })
             }
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={colors.surface}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.card}
           />
         </View>
       </View>
@@ -114,41 +116,43 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: "#fff"
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700"
-  },
-  subtitle: {
-    color: "#4b5563"
-  },
-  section: {
-    gap: 12
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827"
-  },
-  toggleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12
-  },
-  toggleLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827"
-  },
-  toggleHint: {
-    fontSize: 12,
-    color: "#6b7280"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useSettings>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 24,
+      gap: 16,
+      backgroundColor: colors.bg
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text
+    },
+    subtitle: {
+      color: colors.muted
+    },
+    section: {
+      gap: 12
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text
+    },
+    toggleRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12
+    },
+    toggleLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text
+    },
+    toggleHint: {
+      fontSize: 12,
+      color: colors.muted
+    }
+  });
