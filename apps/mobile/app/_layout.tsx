@@ -8,6 +8,8 @@ export default function RootLayout() {
       <PushNotificationManager />
       <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="leaderboards/create" />
+        <Stack.Screen name="leaderboards/[leaderboardId]" />
         <Stack.Screen name="match" />
         <Stack.Screen name="summary" />
         <Stack.Screen name="history/[id]" />
