@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Tabs, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { loadMatch } from "../../src/lib/storage/matchStorage";
 import { useSettings } from "../../src/components/SettingsProvider";
@@ -49,37 +50,84 @@ export default function TabsLayout() {
             backgroundColor: "transparent",
             color: colors.danger,
             fontSize: 16
-          }
+          },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          )
         }}
       />
       <Tabs.Screen
         name="new"
         options={{
-          title: "New"
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: "History"
-        }}
-      />
-      <Tabs.Screen
-        name="leaderboards"
-        options={{
-          title: "Leaderboards"
+          title: "New Match",
+          tabBarLabel: "Match",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="add-circle-outline" color={color} size={size} />
+          )
         }}
       />
       <Tabs.Screen
         name="feed"
         options={{
-          title: "Feed"
+          title: "Feed",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="newspaper-outline" color={color} size={size} />
+          )
         }}
       />
       <Tabs.Screen
         name="friends"
         options={{
-          title: "Friends"
+          title: "Friends",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Tabs.Screen
+        name="leaderboards"
+        options={{
+          title: "Leaderboards",
+          tabBarLabel: "Boards",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trophy-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="pending"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="report-match"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="match/[id]"
+        options={{
+          href: null
         }}
       />
     </Tabs>
