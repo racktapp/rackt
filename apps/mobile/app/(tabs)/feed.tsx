@@ -90,7 +90,7 @@ const getActivityRoute = (activity: ActivityRow) => {
     const matchId =
       (activity.metadata.matchId as string | undefined) ?? activity.entity_id;
     if (matchId) {
-      return `/(tabs)/match/${matchId}`;
+      return `/(app)/match/${matchId}`;
     }
   }
 

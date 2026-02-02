@@ -9,6 +9,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(app)" />
         <Stack.Screen name="leaderboards/create" />
         <Stack.Screen name="leaderboards/[leaderboardId]" />
         <Stack.Screen name="match" />

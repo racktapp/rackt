@@ -59,7 +59,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="new"
         options={{
-          title: "New Match",
+          title: "Match",
           tabBarLabel: "Match",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle-outline" color={color} size={size} />
@@ -87,47 +87,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="leaderboards"
         options={{
-          title: "Leaderboards",
+          title: "Boards",
           tabBarLabel: "Boards",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trophy-outline" color={color} size={size} />
           )
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          href: null
-        }}
-      />
-      <Tabs.Screen
-        name="pending"
-        options={{
-          href: null
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          href: null
-        }}
-      />
-      <Tabs.Screen
-        name="report-match"
-        options={{
-          href: null
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          href: null
-        }}
-      />
-      <Tabs.Screen
-        name="match/[id]"
-        options={{
-          href: null
         }}
       />
     </Tabs>

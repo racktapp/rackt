@@ -68,7 +68,7 @@ export default function FriendProfileScreen() {
       }
 
       if (id === user.id) {
-        router.replace("/(tabs)/profile");
+        router.replace("/(app)/profile");
         return;
       }
 
