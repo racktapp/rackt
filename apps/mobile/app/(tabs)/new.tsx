@@ -197,7 +197,10 @@ export default function SetupMatch() {
   const syncMatchToCloud = async (config: MatchConfig) => {
     try {
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !user) {
+      if (userErr) {
+        throw userErr;
+      }
+      if (!user) {
         throw new Error("Not authenticated");
       }
       const userId = user.id;
@@ -212,6 +215,7 @@ export default function SetupMatch() {
       };
 
       console.log("matches insert payload", payload);
+      console.log("auth.uid expected", userId);
 
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
@@ -220,10 +224,10 @@ export default function SetupMatch() {
         .single();
 
       if (matchError || !matchData) {
-        console.error("Supabase matches insert failed", matchError);
+        console.error("Supabase matches insert failed", matchError, { payload });
         Alert.alert(
           "Cloud sync failed",
-          `Could not save match to cloud: ${matchError?.message ?? "Unknown error"}`
+          `Could not save match to cloud: ${getErrorMessage(matchError)}`
         );
         return;
       }
