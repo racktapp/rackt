@@ -196,32 +196,26 @@ export default function SetupMatch() {
 
   const syncMatchToCloud = async (config: MatchConfig) => {
     try {
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
-      if (userError) {
-        console.error("Supabase auth.getUser failed for match sync", userError);
-        Alert.alert(
-          "Cloud sync failed",
-          `Could not save match to cloud: ${getErrorMessage(userError)}`
-        );
-        return;
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        throw new Error("Not authenticated");
       }
+      const userId = user.id;
 
-      const user = userData?.user;
-      if (!user) {
-        return;
-      }
+      const payload = {
+        sport: config.sport,
+        format: config.format,
+        is_ranked: false,
+        status: "pending",
+        reported_by: userId,
+        played_at: new Date(config.startTime).toISOString()
+      };
+
+      console.log("matches insert payload", payload);
 
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
-        .insert({
-          sport: config.sport,
-          format: config.format,
-          is_ranked: false,
-          status: "pending",
-          reported_by: user.id,
-          played_at: new Date(config.startTime).toISOString()
-        })
+        .insert(payload)
         .select("id")
         .single();
 
@@ -229,7 +223,7 @@ export default function SetupMatch() {
         console.error("Supabase matches insert failed", matchError);
         Alert.alert(
           "Cloud sync failed",
-          `Could not save match to cloud: ${getErrorMessage(matchError)}`
+          `Could not save match to cloud: ${matchError?.message ?? "Unknown error"}`
         );
         return;
       }
@@ -238,7 +232,7 @@ export default function SetupMatch() {
 
       const { error: playersError } = await supabase
         .from("match_players")
-        .insert([{ match_id: matchId, user_id: user.id, side: 1 }]);
+        .insert([{ match_id: matchId, user_id: userId, side: 1 }]);
 
       if (playersError) {
         console.error("Supabase match_players insert failed", playersError);
@@ -251,7 +245,7 @@ export default function SetupMatch() {
 
       const { error: confirmationsError } = await supabase
         .from("match_confirmations")
-        .insert([{ match_id: matchId, user_id: user.id, status: "confirmed" }]);
+        .insert([{ match_id: matchId, user_id: userId, status: "confirmed" }]);
 
       if (confirmationsError) {
         console.error(
