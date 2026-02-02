@@ -205,61 +205,68 @@ export default function SetupMatch() {
       }
       const userId = user.id;
 
-      const payload = {
-        sport: config.sport,
-        format: config.format,
-        is_ranked: false,
-        status: "pending",
-        reported_by: userId,
-        played_at: new Date(config.startTime).toISOString()
-      };
+      {
+        const { data: { user }, error: userErr } = await supabase.auth.getUser();
+        console.log("syncMatchToCloud auth", { userId: user?.id, userErr });
 
-      console.log("matches insert payload", payload);
-      console.log("auth.uid expected", userId);
+        const payload = {
+          sport: config.sport,
+          format: config.format,
+          is_ranked: false,
+          status: "pending",
+          reported_by: user?.id,
+          played_at: new Date(config.startTime).toISOString()
+        };
 
-      const { data: matchData, error: matchError } = await supabase
-        .from("matches")
-        .insert(payload)
-        .select("id")
-        .single();
+        console.log("matches insert payload", payload);
+        console.log("auth.uid expected", userId);
 
-      if (matchError || !matchData) {
-        console.error("Supabase matches insert failed", matchError, { payload });
-        Alert.alert(
-          "Cloud sync failed",
-          `Could not save match to cloud: ${getErrorMessage(matchError)}`
-        );
-        return;
-      }
+        const { data: matchData, error: matchError } = await supabase
+          .from("matches")
+          .insert(payload)
+          .select("id")
+          .single();
 
-      const matchId = matchData.id as string;
+        if (matchError || !matchData) {
+          console.error("Supabase matches insert failed", matchError, {
+            payload
+          });
+          Alert.alert(
+            "Cloud sync failed",
+            `Could not save match to cloud: ${getErrorMessage(matchError)}`
+          );
+          return;
+        }
 
-      const { error: playersError } = await supabase
-        .from("match_players")
-        .insert([{ match_id: matchId, user_id: userId, side: 1 }]);
+        const matchId = matchData.id as string;
 
-      if (playersError) {
-        console.error("Supabase match_players insert failed", playersError);
-        Alert.alert(
-          "Cloud sync failed",
-          `Could not save match to cloud: ${getErrorMessage(playersError)}`
-        );
-        return;
-      }
+        const { error: playersError } = await supabase
+          .from("match_players")
+          .insert([{ match_id: matchId, user_id: userId, side: 1 }]);
 
-      const { error: confirmationsError } = await supabase
-        .from("match_confirmations")
-        .insert([{ match_id: matchId, user_id: userId, status: "confirmed" }]);
+        if (playersError) {
+          console.error("Supabase match_players insert failed", playersError);
+          Alert.alert(
+            "Cloud sync failed",
+            `Could not save match to cloud: ${getErrorMessage(playersError)}`
+          );
+          return;
+        }
 
-      if (confirmationsError) {
-        console.error(
-          "Supabase match_confirmations insert failed",
-          confirmationsError
-        );
-        Alert.alert(
-          "Cloud sync failed",
-          `Could not save match to cloud: ${getErrorMessage(confirmationsError)}`
-        );
+        const { error: confirmationsError } = await supabase
+          .from("match_confirmations")
+          .insert([{ match_id: matchId, user_id: userId, status: "confirmed" }]);
+
+        if (confirmationsError) {
+          console.error(
+            "Supabase match_confirmations insert failed",
+            confirmationsError
+          );
+          Alert.alert(
+            "Cloud sync failed",
+            `Could not save match to cloud: ${getErrorMessage(confirmationsError)}`
+          );
+        }
       }
     } catch (error) {
       console.error("Supabase match sync failed", error);
