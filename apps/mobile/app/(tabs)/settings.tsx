@@ -112,6 +112,15 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Debug</Text>
+        <AppButton
+          label="Input Console (Debug)"
+          onPress={() => router.push("/(debug)/input-console")}
+          variant="secondary"
+        />
+      </View>
     </SafeAreaView>
   );
 }
