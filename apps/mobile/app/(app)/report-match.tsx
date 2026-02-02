@@ -292,7 +292,7 @@ export default function ReportMatchScreen() {
     }
 
     setIsSubmitting(false);
-    router.push(`/(tabs)/match/${matchId}`);
+    router.push(`/(app)/match/${matchId}`);
   };
 
   return (

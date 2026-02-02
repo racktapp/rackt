@@ -119,7 +119,7 @@ export default function PendingConfirmationsScreen() {
               <TouchableOpacity
                 key={match.id}
                 style={styles.card}
-                onPress={() => router.push(`/(tabs)/match/${match.id}`)}
+                onPress={() => router.push(`/(app)/match/${match.id}`)}
               >
                 <View style={styles.cardRow}>
                   <Text style={styles.cardTitle}>{match.sport}</Text>
