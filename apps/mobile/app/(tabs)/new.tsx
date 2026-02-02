@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -24,6 +25,7 @@ import { MatchPreset } from "../../src/lib/presets/types";
 import { MatchConfig, saveMatch } from "../../src/lib/storage/matchStorage";
 import SettingsDrawer from "../../src/components/SettingsDrawer";
 import { ThemeColors, useSettings } from "../../src/components/SettingsProvider";
+import { supabase } from "../../lib/supabase";
 
 const createPlayerRef = (
   name: string,
@@ -47,6 +49,29 @@ const buildPresetSubtitle = (preset: MatchPreset): string => {
     ? `TB to ${preset.rules.tiebreakTo ?? 7}`
     : "No TB";
   return `${setLabel} • ${tiebreakLabel}`;
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (!error) {
+    return "Unknown error";
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  if (typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
 };
 
 export default function SetupMatch() {
@@ -74,6 +99,8 @@ export default function SetupMatch() {
   );
   const [customPresets, setCustomPresets] = useState<MatchPreset[]>([]);
   const [presetName, setPresetName] = useState("");
+  const [isStarting, setIsStarting] = useState(false);
+  const isStartingRef = useRef(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -167,7 +194,91 @@ export default function SetupMatch() {
     }
   }, [sport]);
 
+  const syncMatchToCloud = async (config: MatchConfig) => {
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+      if (userError) {
+        console.error("Supabase auth.getUser failed for match sync", userError);
+        Alert.alert(
+          "Cloud sync failed",
+          `Could not save match to cloud: ${getErrorMessage(userError)}`
+        );
+        return;
+      }
+
+      const user = userData?.user;
+      if (!user) {
+        return;
+      }
+
+      const { data: matchData, error: matchError } = await supabase
+        .from("matches")
+        .insert({
+          sport: config.sport,
+          format: config.format,
+          is_ranked: false,
+          status: "pending",
+          reported_by: user.id,
+          played_at: new Date(config.startTime).toISOString()
+        })
+        .select("id")
+        .single();
+
+      if (matchError || !matchData) {
+        console.error("Supabase matches insert failed", matchError);
+        Alert.alert(
+          "Cloud sync failed",
+          `Could not save match to cloud: ${getErrorMessage(matchError)}`
+        );
+        return;
+      }
+
+      const matchId = matchData.id as string;
+
+      const { error: playersError } = await supabase
+        .from("match_players")
+        .insert([{ match_id: matchId, user_id: user.id, side: 1 }]);
+
+      if (playersError) {
+        console.error("Supabase match_players insert failed", playersError);
+        Alert.alert(
+          "Cloud sync failed",
+          `Could not save match to cloud: ${getErrorMessage(playersError)}`
+        );
+        return;
+      }
+
+      const { error: confirmationsError } = await supabase
+        .from("match_confirmations")
+        .insert([{ match_id: matchId, user_id: user.id, status: "confirmed" }]);
+
+      if (confirmationsError) {
+        console.error(
+          "Supabase match_confirmations insert failed",
+          confirmationsError
+        );
+        Alert.alert(
+          "Cloud sync failed",
+          `Could not save match to cloud: ${getErrorMessage(confirmationsError)}`
+        );
+      }
+    } catch (error) {
+      console.error("Supabase match sync failed", error);
+      Alert.alert(
+        "Cloud sync failed",
+        `Could not save match to cloud: ${getErrorMessage(error)}`
+      );
+    }
+  };
+
   const handleStartMatch = () => {
+    if (isStartingRef.current) {
+      return;
+    }
+    isStartingRef.current = true;
+    setIsStarting(true);
+
     const teamAPlayers: PlayerRef[] = [
       createPlayerRef(playerA1Name, "A", 1)
     ];
@@ -195,9 +306,24 @@ export default function SetupMatch() {
         sport === "badminton" ? undefined : startingServerUserId,
       startTime: Date.now()
     };
-    const matchState = createMatch(config, teamA, teamB);
-    saveMatch({ config, matchState, history: [], timeline: [] });
+    try {
+      const matchState = createMatch(config, teamA, teamB);
+      saveMatch({ config, matchState, history: [], timeline: [] });
+    } catch (error) {
+      console.error("Failed to start match locally", error);
+      Alert.alert(
+        "Match start failed",
+        `Could not start match: ${getErrorMessage(error)}`
+      );
+      isStartingRef.current = false;
+      setIsStarting(false);
+      return;
+    }
+
     router.push("/match");
+    void syncMatchToCloud(config);
+    isStartingRef.current = false;
+    setIsStarting(false);
   };
 
   return (
@@ -530,8 +656,19 @@ export default function SetupMatch() {
         </>
       ) : null}
 
-      <TouchableOpacity style={styles.startButton} onPress={handleStartMatch}>
-        <Text style={styles.startButtonText}>Start Match</Text>
+      <TouchableOpacity
+        style={[styles.startButton, isStarting && styles.startButtonDisabled]}
+        onPress={handleStartMatch}
+        disabled={isStarting}
+      >
+        <View style={styles.startButtonContent}>
+          {isStarting ? (
+            <ActivityIndicator size="small" color="#0B1220" />
+          ) : null}
+          <Text style={styles.startButtonText}>
+            {isStarting ? "Starting..." : "Start Match"}
+          </Text>
+        </View>
       </TouchableOpacity>
 
       {sport !== "badminton" ? (
@@ -741,6 +878,14 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 14,
       backgroundColor: colors.primary,
       alignItems: "center"
+    },
+    startButtonDisabled: {
+      opacity: 0.7
+    },
+    startButtonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8
     },
     startButtonText: {
       color: "#0B1220",
