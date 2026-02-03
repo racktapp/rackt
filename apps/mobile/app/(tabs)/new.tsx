@@ -216,6 +216,7 @@ export default function SetupMatch() {
           p_played_at: new Date(config.startTime).toISOString()
         }
       );
+      console.log("CLOUD match create result", { matchId, matchError });
 
       if (matchError || !matchId) {
         console.error("Supabase matches insert failed", matchError);
@@ -296,8 +297,9 @@ export default function SetupMatch() {
         sport === "badminton" ? undefined : startingServerUserId,
       startTime: Date.now()
     };
+    let matchState: ReturnType<typeof createMatch> | null = null;
     try {
-      const matchState = createMatch(config, teamA, teamB);
+      matchState = createMatch(config, teamA, teamB);
       saveMatch({ config, matchState, history: [], timeline: [] });
     } catch (error) {
       console.error("Failed to start match locally", error);
@@ -310,7 +312,13 @@ export default function SetupMatch() {
       return;
     }
 
-    router.push("/match");
+    const routeTarget = "/match";
+    console.log("START MATCH pressed", {
+      config,
+      routeTarget,
+      localStateReady: !!matchState
+    });
+    router.push(routeTarget);
     void syncMatchToCloud(config);
     isStartingRef.current = false;
     setIsStarting(false);
